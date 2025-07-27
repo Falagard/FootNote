@@ -1,0 +1,31 @@
+-main ApplicationMain 
+--macro openfl.utils._internal.ExtraParamsMacro.include()
+-cp C:/Src/ge/openfl/src
+-D openfl=9.4.1
+--macro lime._internal.macros.DefineMacro.run()
+-cp C:/Src/ge/lime/src
+-D lime=8.1.1
+-cp C:/HaxeToolkit/haxe/lib/starling/2,7,1/src
+-D starling=2.7.1
+-cp Source
+-D lime-harfbuzz
+-D lime-openal
+-D tools=8.1.1
+-D lime-cairo
+-D lime-opengl
+-D no-compilation
+-D native
+-D lime-curl
+-D lime-native
+-D lime-vorbis
+-D openfl-native
+-D lime-cffi
+-D windows
+-D desktop
+--remap flash:openfl
+--connect
+6000
+-cp Export/hl/haxe
+-hl Export/hl/obj/ApplicationMain.hl
+--macro keep("Startup")
+-D final
