@@ -23,6 +23,13 @@ class Game extends Sprite {
 	public static inline var STATE_FILES:Int = 1;
 	public static inline var STATE_LYRICS:Int = 2;
 
+	public static inline var PREVIOUS_KEY:UInt = Keyboard.W;
+	public static inline var NEXT_KEY:UInt = Keyboard.S;
+	public static inline var SELECT_KEY:UInt = Keyboard.ENTER;
+	public static inline var BACK_KEY:UInt = Keyboard.BACKSPACE;
+
+	public static var MAX_LINES:Int = 12; //max number of pages to show in lyrics
+
 	private static var sAssets:AssetManager;
 	public var selectedDriveIdx:Int = 0;
 	public var rootDirs:Array<File>;
@@ -30,6 +37,9 @@ class Game extends Sprite {
 	public var selectedFileIdx:Int = 0;
 	public var directoriesTF:TextField;
 	public var fileText:String;
+	public var currentPageIdx:Int = 0; //for paging through lyrics
+	public var lines:Array<String> = [];
+	
 
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
 
@@ -105,7 +115,7 @@ class Game extends Sprite {
 
 	private function onKeyDown(event:KeyboardEvent):Void
     {
-		if(event.keyCode == Keyboard.DOWN && currentState == STATE_ROOT_DRIVES)
+		if(event.keyCode == PREVIOUS_KEY && currentState == STATE_ROOT_DRIVES)
 		{
 			selectedDriveIdx--;
 			if (selectedDriveIdx < 0) {
@@ -114,7 +124,7 @@ class Game extends Sprite {
 			refreshDirectories();
 			return;
 		}
-		else if(event.keyCode == Keyboard.UP && currentState == STATE_ROOT_DRIVES)
+		else if(event.keyCode == NEXT_KEY && currentState == STATE_ROOT_DRIVES)
 		{
 			selectedDriveIdx++;
 			
@@ -125,7 +135,7 @@ class Game extends Sprite {
 			refreshDirectories();
 			return;
 		}
-		else if(event.keyCode == Keyboard.DOWN && currentState == STATE_FILES)
+		else if(event.keyCode == PREVIOUS_KEY && currentState == STATE_FILES)
 		{
 			selectedFileIdx--;
 			if (selectedFileIdx < 0) {
@@ -134,7 +144,7 @@ class Game extends Sprite {
 			refreshFiles();
 			return;
 		}
-		else if(event.keyCode == Keyboard.UP && currentState == STATE_FILES)
+		else if(event.keyCode == NEXT_KEY && currentState == STATE_FILES)
 		{
 			selectedFileIdx++;
 			
@@ -145,7 +155,7 @@ class Game extends Sprite {
 			refreshFiles();
 			return;
 		}
-		else if(event.keyCode == Keyboard.ENTER && currentState == STATE_ROOT_DRIVES)
+		else if(event.keyCode == SELECT_KEY && currentState == STATE_ROOT_DRIVES)
 		{
 			currentState = STATE_FILES;
 
@@ -154,7 +164,7 @@ class Game extends Sprite {
 			refreshFiles();
 			return;
 		}
-		else if(event.keyCode == Keyboard.ENTER && currentState == STATE_FILES)
+		else if(event.keyCode == SELECT_KEY && currentState == STATE_FILES)
 		{
 			currentState = STATE_LYRICS;
 
@@ -165,6 +175,9 @@ class Game extends Sprite {
 			fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void
 			{
 				fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
+
+				lines = fileText.split("\n");
+
 				refreshLyrics();
 				
 			});
@@ -182,7 +195,7 @@ class Game extends Sprite {
 			
 			return;
 		}
-		else if(event.keyCode == Keyboard.BACKSPACE && currentState == STATE_FILES)
+		else if(event.keyCode == BACK_KEY && currentState == STATE_FILES)
 		{
 			currentState = STATE_ROOT_DRIVES;
 
@@ -190,11 +203,40 @@ class Game extends Sprite {
 
 			return;
 		}
-		else if(event.keyCode == Keyboard.BACKSPACE && currentState == STATE_LYRICS)
+		else if(event.keyCode == BACK_KEY && currentState == STATE_LYRICS)
 		{
 			currentState = STATE_FILES;
 
 			refreshFiles();
+			
+			return;
+		}
+		else if(event.keyCode == NEXT_KEY && currentState == STATE_LYRICS)
+		{
+	
+			//get number of pages
+			var totalPages:Int = Math.ceil(lines.length / MAX_LINES);
+
+			if (currentPageIdx + 1 > totalPages - 1) {
+				return;
+			}
+
+			currentPageIdx++;
+
+			refreshLyrics();
+			
+			return;
+		}
+		else if(event.keyCode == PREVIOUS_KEY && currentState == STATE_LYRICS)
+		{
+
+			currentPageIdx--;
+
+			if (currentPageIdx == -1) {
+				currentPageIdx = 0;
+			}
+
+			refreshLyrics();
 			
 			return;
 		}
@@ -203,14 +245,28 @@ class Game extends Sprite {
 	private function refreshLyrics():Void
 	{
 		var selectedFile = selectedDriveFiles[selectedFileIdx];
+		//var htmlText:String = "<i>" + selectedFile.name + "</i><br/>";
+		var htmlText:String = "";
 
-		var htmlText:String = "<i>" + selectedFile.name + "</i><br/>";
+		//we can only show MAX_LINES lines at a time
+		var startIdx = currentPageIdx * MAX_LINES;
+		var endIdx = startIdx + MAX_LINES;
 
-		//for each line in fileText, add it to htmlText
+		//for each line in fileText, add it to htmlText	
 		if (fileText != null) {
-			var lines = fileText.split("\n");
+	
+			var currIdx:Int = 0;
+			
 			for (line in lines) {
+				if(currIdx < startIdx) {
+					currIdx++;
+					continue;
+				}
+				if(currIdx > endIdx) {
+					break;
+				}
 				htmlText += line + "<br/>";
+				currIdx++;
 			}
 		}
 
