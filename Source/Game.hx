@@ -29,6 +29,7 @@ class Game extends Sprite {
 	public var selectedDriveFiles:Array<File>;
 	public var selectedFileIdx:Int = 0;
 	public var directoriesTF:TextField;
+	public var fileText:String;
 
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
 
@@ -92,7 +93,9 @@ class Game extends Sprite {
         directoriesTF.x = directoriesTF.y = offset;
         directoriesTF.border = true;
 		directoriesTF.isHtmlText = true;
-
+		directoriesTF.height = Starling.current.stage.stageHeight - offset * 2;
+		directoriesTF.width = Starling.current.stage.stageWidth - offset * 2;
+		
 		addChild(directoriesTF);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
@@ -102,7 +105,7 @@ class Game extends Sprite {
 
 	private function onKeyDown(event:KeyboardEvent):Void
     {
-		if(event.keyCode == Keyboard.A && currentState == STATE_ROOT_DRIVES)
+		if(event.keyCode == Keyboard.DOWN && currentState == STATE_ROOT_DRIVES)
 		{
 			selectedDriveIdx--;
 			if (selectedDriveIdx < 0) {
@@ -111,7 +114,7 @@ class Game extends Sprite {
 			refreshDirectories();
 			return;
 		}
-		else if(event.keyCode == Keyboard.D && currentState == STATE_ROOT_DRIVES)
+		else if(event.keyCode == Keyboard.UP && currentState == STATE_ROOT_DRIVES)
 		{
 			selectedDriveIdx++;
 			
@@ -122,7 +125,7 @@ class Game extends Sprite {
 			refreshDirectories();
 			return;
 		}
-		else if(event.keyCode == Keyboard.A && currentState == STATE_FILES)
+		else if(event.keyCode == Keyboard.DOWN && currentState == STATE_FILES)
 		{
 			selectedFileIdx--;
 			if (selectedFileIdx < 0) {
@@ -131,7 +134,7 @@ class Game extends Sprite {
 			refreshFiles();
 			return;
 		}
-		else if(event.keyCode == Keyboard.D && currentState == STATE_FILES)
+		else if(event.keyCode == Keyboard.UP && currentState == STATE_FILES)
 		{
 			selectedFileIdx++;
 			
@@ -151,9 +154,69 @@ class Game extends Sprite {
 			refreshFiles();
 			return;
 		}
+		else if(event.keyCode == Keyboard.ENTER && currentState == STATE_FILES)
+		{
+			currentState = STATE_LYRICS;
+
+			var selectedFile = selectedDriveFiles[selectedFileIdx];
+
+			//try loading the file as a text file
+			var fileStream = new openfl.filesystem.FileStream();
+			fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void
+			{
+				fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
+				refreshLyrics();
+				
+			});
+			fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void
+			{
+				directoriesTF.text = "Error loading file: " + selectedFile.name;
+				directoriesTF.isHtmlText = false;
+				//directoriesTF.alpha = 1.0;
+			});
+
+			fileStream.openAsync(selectedFile, openfl.filesystem.FileMode.READ);
+
+			//fileStream.close();
+
+			
+			return;
+		}
+		else if(event.keyCode == Keyboard.BACKSPACE && currentState == STATE_FILES)
+		{
+			currentState = STATE_ROOT_DRIVES;
+
+			refreshDirectories();
+
+			return;
+		}
+		else if(event.keyCode == Keyboard.BACKSPACE && currentState == STATE_LYRICS)
+		{
+			currentState = STATE_FILES;
+
+			refreshFiles();
+			
+			return;
+		}
     }
 
- 
+	private function refreshLyrics():Void
+	{
+		var selectedFile = selectedDriveFiles[selectedFileIdx];
+
+		var htmlText:String = "<i>" + selectedFile.name + "</i><br/>";
+
+		//for each line in fileText, add it to htmlText
+		if (fileText != null) {
+			var lines = fileText.split("\n");
+			for (line in lines) {
+				htmlText += line + "<br/>";
+			}
+		}
+
+		directoriesTF.text = htmlText;
+		directoriesTF.isHtmlText = true;
+	}
 
 	// Use starling 
 	
@@ -178,8 +241,7 @@ class Game extends Sprite {
 			
 		}
 
-		//add one for the "back" option
-		//htmlText += "<br/><i>Press A/D to change drive, Enter to select</i>";
+		htmlText += "Press A or D to change drive, Enter to select";
 
 		directoriesTF.text = htmlText;	
 	}
@@ -202,9 +264,6 @@ class Game extends Sprite {
 			htmlText += "<br/>";
 			
 		}
-
-		//add one for the "back" option
-		//htmlText += "<br/><i>Press A/D to change selected file, Enter to select, Backspace to go back</i>";
 
 		directoriesTF.text = htmlText;	
 	}
