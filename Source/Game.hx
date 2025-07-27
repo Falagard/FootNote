@@ -121,6 +121,7 @@ class Game extends Sprite {
 			if (selectedDriveIdx < 0) {
 				selectedDriveIdx = rootDirs.length - 1;
 			}
+
 			refreshDirectories();
 			return;
 		}
@@ -159,14 +160,34 @@ class Game extends Sprite {
 		{
 			currentState = STATE_FILES;
 
-			selectedDriveFiles = rootDirs[selectedDriveIdx].getDirectoryListing();
+			selectedFileIdx = 0; //reset file index
 
+			selectedDriveFiles = [];
+
+			var originalDriveFiles = rootDirs[selectedDriveIdx].getDirectoryListing();
+
+			for (i in 0...originalDriveFiles.length) {
+				var file = originalDriveFiles[i];
+
+				if( file.isDirectory) {
+					continue; //skip directories, currently only allowing files in root directories
+				}
+				if( file.extension != "txt") {
+					continue; //skip non-text files	
+				}
+
+				selectedDriveFiles.push(file);
+			}
+
+			
 			refreshFiles();
 			return;
 		}
 		else if(event.keyCode == SELECT_KEY && currentState == STATE_FILES)
 		{
 			currentState = STATE_LYRICS;
+
+			currentPageIdx = 0; //reset page index
 
 			var selectedFile = selectedDriveFiles[selectedFileIdx];
 
@@ -307,6 +328,9 @@ class Game extends Sprite {
 		var htmlText:String = "<i>Choose a file: </i><br/>";
 
 		for (i in 0...selectedDriveFiles.length) {
+
+			var currentFile = selectedDriveFiles[i];
+			
 			if (i == selectedFileIdx) {
 				htmlText += "<b><font color='#2FF0000'>";
 			}
