@@ -40,6 +40,9 @@ class Game extends Sprite {
 	public var currentPageIdx:Int = 0; //for paging through lyrics
 	public var lines:Array<String> = [];
 	
+	var directoryStack:Array<File> = [];
+	var currentDirectory:File;
+	var currentDirectoryEntries:Array<File> = []; // both files and folders
 
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
 
@@ -60,7 +63,8 @@ class Game extends Sprite {
 
 	public function start(assets:AssetManager):Void
     {
-		rootDirs = File.getRootDirectories();
+		//rootDirs = File.getRootDirectories();
+		rootDirs = File.documentsDirectory.getDirectoryListing();
 
         sAssets = assets;
         var texture = assets.getTexture("LoadingScreen");
@@ -140,7 +144,7 @@ class Game extends Sprite {
 		{
 			selectedFileIdx--;
 			if (selectedFileIdx < 0) {
-				selectedFileIdx = selectedDriveFiles.length - 1;
+				selectedFileIdx = currentDirectoryEntries.length - 1;
 			}
 			refreshFiles();
 			return;
@@ -149,79 +153,119 @@ class Game extends Sprite {
 		{
 			selectedFileIdx++;
 			
-			if (selectedFileIdx > selectedDriveFiles.length - 1) {
+			if (selectedFileIdx > currentDirectoryEntries.length - 1) {
 				selectedFileIdx = 0;
 			}
 
 			refreshFiles();
 			return;
 		}
-		else if(event.keyCode == SELECT_KEY && currentState == STATE_ROOT_DRIVES)
-		{
-			currentState = STATE_FILES;
+		// else if(event.keyCode == SELECT_KEY && currentState == STATE_ROOT_DRIVES)
+		// {
+		// 	currentState = STATE_FILES;
 
-			selectedFileIdx = 0; //reset file index
+		// 	selectedFileIdx = 0; //reset file index
 
-			selectedDriveFiles = [];
+		// 	selectedDriveFiles = [];
 
-			var originalDriveFiles = rootDirs[selectedDriveIdx].getDirectoryListing();
+		// 	var originalDriveFiles = rootDirs[selectedDriveIdx].getDirectoryListing();
 
-			for (i in 0...originalDriveFiles.length) {
-				var file = originalDriveFiles[i];
+		// 	for (i in 0...originalDriveFiles.length) {
+		// 		var file = originalDriveFiles[i];
 
-				if( file.isDirectory) {
-					continue; //skip directories, currently only allowing files in root directories
-				}
-				if( file.extension != "txt") {
-					continue; //skip non-text files	
-				}
+		// 		if( file.isDirectory) {
+		// 			continue; //skip directories, currently only allowing files in root directories
+		// 		}
+		// 		if( file.extension != "txt") {
+		// 			continue; //skip non-text files	
+		// 		}
 
-				selectedDriveFiles.push(file);
-			}
+		// 		selectedDriveFiles.push(file);
+		// 	}
 
 			
-			refreshFiles();
+		// 	refreshFiles();
+		// 	return;
+		// }
+		else if(event.keyCode == SELECT_KEY && currentState == STATE_ROOT_DRIVES)
+		{
+			currentDirectory = rootDirs[selectedDriveIdx];
+			directoryStack = [];
+			refreshCurrentDirectory(currentDirectory);
+			currentState = STATE_FILES;
+			selectedFileIdx = 0;
 			return;
 		}
 		else if(event.keyCode == SELECT_KEY && currentState == STATE_FILES)
 		{
-			currentState = STATE_LYRICS;
+			// currentState = STATE_LYRICS;
 
-			currentPageIdx = 0; //reset page index
+			// currentPageIdx = 0; //reset page index
 
-			var selectedFile = selectedDriveFiles[selectedFileIdx];
+			// var selectedFile = selectedDriveFiles[selectedFileIdx];
 
-			//try loading the file as a text file
-			var fileStream = new openfl.filesystem.FileStream();
-			fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void
-			{
-				fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
+			// //try loading the file as a text file
+			// var fileStream = new openfl.filesystem.FileStream();
+			// fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void
+			// {
+			// 	fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
 
-				lines = fileText.split("\n");
+			// 	lines = fileText.split("\n");
 
-				refreshLyrics();
+			// 	refreshLyrics();
 				
-			});
-			fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void
-			{
-				directoriesTF.text = "Error loading file: " + selectedFile.name;
-				directoriesTF.isHtmlText = false;
-				//directoriesTF.alpha = 1.0;
-			});
+			// });
+			// fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void
+			// {
+			// 	directoriesTF.text = "Error loading file: " + selectedFile.name;
+			// 	directoriesTF.isHtmlText = false;
+			// 	//directoriesTF.alpha = 1.0;
+			// });
 
-			fileStream.openAsync(selectedFile, openfl.filesystem.FileMode.READ);
+			// fileStream.openAsync(selectedFile, openfl.filesystem.FileMode.READ);
 
-			//fileStream.close();
+			// //fileStream.close();
 
 			
+			// return;	
+
+			var selectedFile = currentDirectoryEntries[selectedFileIdx];
+
+			if (selectedFile.isDirectory) {
+				directoryStack.push(currentDirectory);
+				currentDirectory = selectedFile;
+				refreshCurrentDirectory(currentDirectory);
+				selectedFileIdx = 0;
+				return;
+			}
+
+			// It's a .txt file
+			currentState = STATE_LYRICS;
+			currentPageIdx = 0;
+
+			var fileStream = new openfl.filesystem.FileStream();
+			fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void {
+				fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
+				lines = fileText.split("\n");
+				refreshLyrics();
+			});
+			fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
+				directoriesTF.text = "Error loading file: " + selectedFile.name;
+				directoriesTF.isHtmlText = false;
+			});
+			fileStream.openAsync(selectedFile, openfl.filesystem.FileMode.READ);
 			return;
 		}
 		else if(event.keyCode == BACK_KEY && currentState == STATE_FILES)
 		{
-			currentState = STATE_ROOT_DRIVES;
-
-			refreshDirectories();
-
+			if (directoryStack.length > 0) {
+				currentDirectory = directoryStack.pop();
+				refreshCurrentDirectory(currentDirectory);
+				selectedFileIdx = 0;
+			} else {
+				currentState = STATE_ROOT_DRIVES;
+				refreshDirectories();
+			}
 			return;
 		}
 		else if(event.keyCode == BACK_KEY && currentState == STATE_LYRICS)
@@ -262,6 +306,20 @@ class Game extends Sprite {
 			return;
 		}
     }
+
+	function refreshCurrentDirectory(dir:File):Void {
+		currentDirectoryEntries = [];
+
+		var contents = dir.getDirectoryListing();
+
+		for (item in contents) {
+			if (item.isDirectory || item.extension == "txt") {
+				currentDirectoryEntries.push(item);
+			}
+		}
+
+		refreshFiles(); // Update your file list display logic here
+	}
 
 	private function refreshLyrics():Void
 	{
@@ -327,15 +385,15 @@ class Game extends Sprite {
 	{
 		var htmlText:String = "<i>Choose a file: </i><br/>";
 
-		for (i in 0...selectedDriveFiles.length) {
+		for (i in 0...currentDirectoryEntries .length) {
 
-			var currentFile = selectedDriveFiles[i];
+			var currentFile = currentDirectoryEntries [i];
 			
 			if (i == selectedFileIdx) {
 				htmlText += "<b><font color='#2FF0000'>";
 			}
 
-			htmlText += selectedDriveFiles[i].name;
+			htmlText += currentDirectoryEntries [i].name;
 
 			if (i == selectedFileIdx) {
 				htmlText += "</font></b>";
