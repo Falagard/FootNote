@@ -15,13 +15,13 @@ import starling.core.Starling;
 import starling.events.Touch;
 import starling.events.TouchEvent;
 import openfl.ui.Keyboard;
+import openfl.events.Event;
 
 class Game extends Sprite {
 	
 	//add an enum for the different states
-	public static inline var STATE_ROOT_DRIVES:Int = 0;
-	public static inline var STATE_FILES:Int = 1;
-	public static inline var STATE_LYRICS:Int = 2;
+	public static inline var STATE_FILES:Int = 0;
+	public static inline var STATE_LYRICS:Int = 1;
 
 	public static inline var PREVIOUS_KEY:UInt = Keyboard.W;
 	public static inline var NEXT_KEY:UInt = Keyboard.S;
@@ -46,24 +46,19 @@ class Game extends Sprite {
 
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
 
+	var FILES_PER_PAGE:Int = 12;
+	var filePage:Int = 0;
+
 	
 	public function new () {
 		
 		super ();
 		
-		//var quad:Quad = new Quad(200, 200, Color.RED);
-        //quad.x = 100;
-        //quad.y = 50;
-        //addChild(quad);
-
-		
-		
-		
 	}
 
 	public function start(assets:AssetManager):Void
     {
-		//rootDirs = File.getRootDirectories();
+
 		rootDirs = File.documentsDirectory.getDirectoryListing();
 
         sAssets = assets;
@@ -86,8 +81,11 @@ class Game extends Sprite {
 				img.alpha = 0.0;
 				directoriesTF.alpha = 1.0;
 
-				//show text 
-				refreshDirectories();
+				var directory:File = File.documentsDirectory;
+
+				directory.addEventListener(Event.SELECT, directorySelected);
+				directory.browseForDirectory("Select Directory");
+					
 			};
 
 		Starling.current.juggler.add(tween);
@@ -113,34 +111,20 @@ class Game extends Sprite {
 		addChild(directoriesTF);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
-		//stage.addEventListener(MouseEvent.KEY_DOWN, onKeyDown);
     }
+
+	function directorySelected(event:Event):Void
+	{
+		//Cast the event target to a File object
+		var directory:File = cast(event.target, File);
+		currentState = STATE_FILES; // Set initial state to files
+		refreshCurrentDirectory(directory);
+	}
 
 
 	private function onKeyDown(event:KeyboardEvent):Void
     {
-		if(event.keyCode == PREVIOUS_KEY && currentState == STATE_ROOT_DRIVES)
-		{
-			selectedDriveIdx--;
-			if (selectedDriveIdx < 0) {
-				selectedDriveIdx = rootDirs.length - 1;
-			}
-
-			refreshDirectories();
-			return;
-		}
-		else if(event.keyCode == NEXT_KEY && currentState == STATE_ROOT_DRIVES)
-		{
-			selectedDriveIdx++;
-			
-			if (selectedDriveIdx > rootDirs.length - 1) {
-				selectedDriveIdx = 0;
-			}
-
-			refreshDirectories();
-			return;
-		}
-		else if(event.keyCode == PREVIOUS_KEY && currentState == STATE_FILES)
+		if(event.keyCode == PREVIOUS_KEY && currentState == STATE_FILES)
 		{
 			selectedFileIdx--;
 			if (selectedFileIdx < 0) {
@@ -160,75 +144,8 @@ class Game extends Sprite {
 			refreshFiles();
 			return;
 		}
-		// else if(event.keyCode == SELECT_KEY && currentState == STATE_ROOT_DRIVES)
-		// {
-		// 	currentState = STATE_FILES;
-
-		// 	selectedFileIdx = 0; //reset file index
-
-		// 	selectedDriveFiles = [];
-
-		// 	var originalDriveFiles = rootDirs[selectedDriveIdx].getDirectoryListing();
-
-		// 	for (i in 0...originalDriveFiles.length) {
-		// 		var file = originalDriveFiles[i];
-
-		// 		if( file.isDirectory) {
-		// 			continue; //skip directories, currently only allowing files in root directories
-		// 		}
-		// 		if( file.extension != "txt") {
-		// 			continue; //skip non-text files	
-		// 		}
-
-		// 		selectedDriveFiles.push(file);
-		// 	}
-
-			
-		// 	refreshFiles();
-		// 	return;
-		// }
-		else if(event.keyCode == SELECT_KEY && currentState == STATE_ROOT_DRIVES)
-		{
-			currentDirectory = rootDirs[selectedDriveIdx];
-			directoryStack = [];
-			refreshCurrentDirectory(currentDirectory);
-			currentState = STATE_FILES;
-			selectedFileIdx = 0;
-			return;
-		}
 		else if(event.keyCode == SELECT_KEY && currentState == STATE_FILES)
 		{
-			// currentState = STATE_LYRICS;
-
-			// currentPageIdx = 0; //reset page index
-
-			// var selectedFile = selectedDriveFiles[selectedFileIdx];
-
-			// //try loading the file as a text file
-			// var fileStream = new openfl.filesystem.FileStream();
-			// fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void
-			// {
-			// 	fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
-
-			// 	lines = fileText.split("\n");
-
-			// 	refreshLyrics();
-				
-			// });
-			// fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void
-			// {
-			// 	directoriesTF.text = "Error loading file: " + selectedFile.name;
-			// 	directoriesTF.isHtmlText = false;
-			// 	//directoriesTF.alpha = 1.0;
-			// });
-
-			// fileStream.openAsync(selectedFile, openfl.filesystem.FileMode.READ);
-
-			// //fileStream.close();
-
-			
-			// return;	
-
 			var selectedFile = currentDirectoryEntries[selectedFileIdx];
 
 			if (selectedFile.isDirectory) {
@@ -262,9 +179,6 @@ class Game extends Sprite {
 				currentDirectory = directoryStack.pop();
 				refreshCurrentDirectory(currentDirectory);
 				selectedFileIdx = 0;
-			} else {
-				currentState = STATE_ROOT_DRIVES;
-				refreshDirectories();
 			}
 			return;
 		}
@@ -316,14 +230,18 @@ class Game extends Sprite {
 			if (item.isDirectory || item.extension == "txt") {
 				currentDirectoryEntries.push(item);
 			}
-		}
+		}		
+
+		filePage = 0;
+		selectedFileIdx = 0;
+
 
 		refreshFiles(); // Update your file list display logic here
 	}
 
 	private function refreshLyrics():Void
 	{
-		var selectedFile = selectedDriveFiles[selectedFileIdx];
+		//var selectedFile = selectedDriveFiles[selectedFileIdx];
 		//var htmlText:String = "<i>" + selectedFile.name + "</i><br/>";
 		var htmlText:String = "";
 
@@ -383,26 +301,36 @@ class Game extends Sprite {
 
 	public function refreshFiles():Void
 	{
-		var htmlText:String = "<i>Choose a file: </i><br/>";
+		var totalPages = Math.ceil(currentDirectoryEntries.length / FILES_PER_PAGE);
+		if (filePage >= totalPages) filePage = totalPages - 1;
+		if (filePage < 0) filePage = 0;
 
-		for (i in 0...currentDirectoryEntries .length) {
+		var htmlText:String = "<i>Choose a file or folder: </i><br/>";
+		var startIdx = filePage * FILES_PER_PAGE;
+		var endIdx = startIdx + FILES_PER_PAGE;
 
-			var currentFile = currentDirectoryEntries [i];
-			
+		for (i in startIdx...endIdx) {
+			if (i >= currentDirectoryEntries.length) break;
+
+			var currentFile = currentDirectoryEntries[i];
+
 			if (i == selectedFileIdx) {
 				htmlText += "<b><font color='#2FF0000'>";
 			}
 
-			htmlText += currentDirectoryEntries [i].name;
+			htmlText += currentFile.isDirectory ? "[DIR] " : "";
+			htmlText += currentFile.name;
 
 			if (i == selectedFileIdx) {
 				htmlText += "</font></b>";
 			}
 
 			htmlText += "<br/>";
-			
 		}
 
-		directoriesTF.text = htmlText;	
+		htmlText += "<br/>W/S to move, Enter to select, Backspace to go back";
+
+		directoriesTF.text = htmlText;
 	}
+
 }
