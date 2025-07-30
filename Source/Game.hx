@@ -44,10 +44,9 @@ class Game extends Sprite {
 
 	private static var sAssets:AssetManager;
 	public var selectedDriveIdx:Int = 0;
-	public var rootDirs:Array<openfl.filesystem.File>;
 	public var selectedDriveFiles:Array<openfl.filesystem.File>;
 	public var selectedFileIdx:Int = 0;
-	public var directoriesTF:TextField;
+	public var contentTF:TextField;
 	public var fileText:String;
 	public var currentPageIdx:Int = 0; //for paging through lyrics
 	public var lines:Array<String> = [];
@@ -61,9 +60,10 @@ class Game extends Sprite {
 	var FILES_PER_PAGE:Int = 12;
 	var filePage:Int = 0;
 
-	var server:Socket = null;
+	//var server:Socket = null;
+	//var handlingClient:Bool = false;
 
-	var handlingClient:Bool = false;
+	var fileServer:FileServer;
 	
 	public function new () {
 		
@@ -73,9 +73,7 @@ class Game extends Sprite {
 
 	public function start(assets:AssetManager):Void
     {
-		rootDirs = openfl.filesystem.File.documentsDirectory.getDirectoryListing();
-
-        sAssets = assets;
+		sAssets = assets;
         var texture = assets.getTexture("LoadingScreen");
         var img = new Image(texture);
 		img.alpha = 0.0;
@@ -93,7 +91,7 @@ class Game extends Sprite {
 			{ 
 				//hide img 
 				img.alpha = 0.0;
-				directoriesTF.alpha = 1.0;
+				contentTF.alpha = 1.0;
 
 				//var directory:openfl.filesystem.File = openfl.filesystem.File.documentsDirectory;
 
@@ -110,220 +108,27 @@ class Game extends Sprite {
         var ttFont:String = "Ubuntu";
         var ttFontSize:Int = 19;
         
-        directoriesTF = new TextField(300, 80, 
+        contentTF = new TextField(300, 80, 
             "");
 
-		directoriesTF.alpha = 0.0;
+		contentTF.alpha = 0.0;
 
-		directoriesTF.format.setTo(ttFont, ttFontSize, 0x33399);
-        directoriesTF.x = directoriesTF.y = offset;
-        directoriesTF.border = true;
-		directoriesTF.isHtmlText = true;
-		directoriesTF.height = Starling.current.stage.stageHeight - offset * 2;
-		directoriesTF.width = Starling.current.stage.stageWidth - offset * 2;
+		contentTF.format.setTo(ttFont, ttFontSize, 0x33399);
+        contentTF.x = contentTF.y = offset;
+        contentTF.border = true;
+		contentTF.isHtmlText = true;
+		contentTF.height = Starling.current.stage.stageHeight - offset * 2;
+		contentTF.width = Starling.current.stage.stageWidth - offset * 2;
 		
-		addChild(directoriesTF);
+		addChild(contentTF);
+
+		refreshCurrentDirectory(openfl.filesystem.File.documentsDirectory);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 
-		server = new Socket();
-        server.bind(new Host("0.0.0.0"), 8080);
-        server.listen(10);
-        trace("Listening on http://localhost:8080");
-
-		server.setBlocking(false);
-
-		refreshCurrentDirectory(openfl.filesystem.File.documentsDirectory);
-
-		Timer.delay(() -> checkClients(), 100);
+		fileServer = new FileServer();
 
     }
-
-	function checkClients():Void {
-		if (server == null || handlingClient) {
-
-		}
-		else
-		{
-			var client:Socket = null;
-			try 
-			{
-				client = server.accept();
-				if (client != null) {
-					handlingClient = true;
-					handleClient(client);
-					handlingClient = false;
-				}
-			} catch (e:Dynamic) {
-				if(client != null) {
-					client.close();
-				}
-				handlingClient = false;
-			}
-		}
-
-		Timer.delay(() -> checkClients(), 100);
-	} 
-
-	static function handleClient(client:Socket):Void {
-        final input = client.input;
-        final output = client.output;
-
-        var requestLine = input.readLine();
-        if (requestLine == null) return;
-
-        var method = requestLine.split(" ")[0];
-        var path = requestLine.split(" ")[1];
-
-        var headers:Map<String, String> = new Map();
-        var contentLength = 0;
-        var boundary = "";
-        var line:String;
-
-        while ((line = input.readLine()) != "") {
-            var parts = line.split(": ");
-            if (parts.length == 2) {
-                headers[parts[0].toLowerCase()] = parts[1];
-                if (parts[0].toLowerCase() == "content-length")
-                    contentLength = Std.parseInt(parts[1]);
-                if (parts[0].toLowerCase() == "content-type" && parts[1].indexOf("multipart/form-data") != -1) {
-                    var b = parts[1].split("boundary=")[1];
-                    if (b != null) boundary = "--" + StringTools.trim(b);
-                }
-            }
-        }
-
-        if (method == "GET") {
-            if (StringTools.startsWith(path, "/view?file=")) {
-                var filename = path.split("file=")[1];
-                serveFileView(output, filename);
-            } else if (StringTools.startsWith(path, "/delete?file=")) {
-                var filename = path.split("file=")[1];
-                handleDelete(output, filename);
-            } else {
-                sendUploadForm(output);
-            }
-        } else if (method == "POST") {
-            handleUpload(input, output, contentLength, boundary);
-        }
-
-        client.close();
-    }
-
-	static function sendUploadForm(output:Output):Void {
-        var files = FileSystem.readDirectory(openfl.filesystem.File.documentsDirectory.nativePath);
-        var fileList = "";
-        for (file in files) {
-            if (StringTools.endsWith(file, ".txt")) {
-                var safe = StringTools.urlEncode(file);
-                fileList += '<li>
-                    <a href="/view?file=$safe">$file</a>
-                    &nbsp; | &nbsp;
-                    <a href="/delete?file=$safe" onclick="return confirm(\'Delete $file?\')">Delete</a>
-                </li>';
-            }
-        }
-
-        final html = '
-        <html>
-            <body>
-                <h1>Upload Text Files</h1>
-                <form method="POST" enctype="multipart/form-data">
-                    <input type="file" name="file" multiple />
-                    <input type="submit" value="Upload" />
-                </form>
-                <h2>Uploaded Files</h2>
-                <ul>$fileList</ul>
-            </body>
-        </html>
-        ';
-        sendResponse(output, 200, html, "text/html");
-    }
-
-	static function serveFileView(output:Output, filename:String):Void {
-        try {
-            var safeName = sanitizeFilename(filename);
-            var contents = File.getContent(openfl.filesystem.File.documentsDirectory + safeName);
-            var html = '
-                <html>
-                    <body>
-                        <h1>Viewing: $safeName</h1>
-                        <pre>${StringTools.htmlEscape(contents)}</pre>
-                        <a href="/">Back</a>
-                    </body>
-                </html>
-            ';
-            sendResponse(output, 200, html, "text/html");
-        } catch (e) {
-            sendResponse(output, 404, "File not found", "text/plain");
-        }
-    }
-
-	static function handleDelete(output:Output, filename:String):Void {
-        try {
-            var safeName = sanitizeFilename(filename);
-            var directory = openfl.filesystem.File.documentsDirectory.nativePath;
-			var path = Path.join([directory, safeName]);
-
-            if (FileSystem.exists(path)) {
-                FileSystem.deleteFile(path);
-                sendResponse(output, 200, 'Deleted "$safeName".<br><a href="/">Back</a>', "text/html");
-            } else {
-                sendResponse(output, 404, "File not found", "text/plain");
-            }
-        } catch (e) {
-            sendResponse(output, 500, "Error deleting file", "text/plain");
-        }
-    }
-
-    static function handleUpload(input:Input, output:Output, contentLength:Int, boundary:String):Void {
-        if (boundary == "") {
-            sendResponse(output, 400, "Bad Request: Missing multipart boundary", "text/plain");
-            return;
-        }
-
-        var body = input.read(contentLength).toString();
-        var parts = body.split(boundary);
-        var savedFiles = [];
-
-        for (part in parts) {
-            if (part.indexOf("Content-Disposition") != -1 && part.indexOf("filename=") != -1) {
-                var nameStart = part.indexOf('filename="') + 10;
-                var nameEnd = part.indexOf('"', nameStart);
-                var filename = part.substr(nameStart, nameEnd - nameStart);
-                filename = filename.split("\\").pop();
-                if (!StringTools.endsWith(filename, ".txt")) continue;
-
-                var contentStart = part.indexOf("\r\n\r\n");
-                if (contentStart != -1) {
-                    var content = part.substr(contentStart + 4);
-                    content = content.split("\r\n")[0];
-                    var safeName = sanitizeFilename(filename);
-					var directory = openfl.filesystem.File.documentsDirectory.nativePath;
-					var fullPath = Path.join([directory, safeName]);
-                    File.saveContent(fullPath, content);
-                    savedFiles.push(safeName);
-                }
-            }
-        }
-
-        sendResponse(output, 200, "Uploaded: " + savedFiles.join(", ") + "<br><a href='/'>Back</a>", "text/html");
-    }
-
-    static function sanitizeFilename(name:String):String {
-        var s1 = StringTools.replace(name, "..", "");
-		var s2 = StringTools.replace(s1, "/", "_");
-		return StringTools.replace(s2, "\\", "_");
-    }
-
-    static function sendResponse(output:Output, status:Int, body:String, contentType:String):Void {
-        output.writeString('HTTP/1.1 $status OK\r\n');
-        output.writeString('Content-Type: $contentType\r\n');
-        output.writeString('Content-Length: ${body.length}\r\n');
-        output.writeString('Connection: close\r\n\r\n');
-        output.writeString(body);
-    }
-
 
 	function directorySelected(event:Event):Void
 	{
@@ -379,8 +184,8 @@ class Game extends Sprite {
 				refreshLyrics();
 			});
 			fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
-				directoriesTF.text = "Error loading file: " + selectedFile.name;
-				directoriesTF.isHtmlText = false;
+				contentTF.text = "Error loading file: " + selectedFile.name;
+				contentTF.isHtmlText = false;
 			});
 			fileStream.openAsync(selectedFile, openfl.filesystem.FileMode.READ);
 			return;
@@ -479,36 +284,8 @@ class Game extends Sprite {
 			}
 		}
 
-		directoriesTF.text = htmlText;
-		directoriesTF.isHtmlText = true;
-	}
-
-	// Use starling 
-	
-	public function refreshDirectories():Void
-	{
-		
-
-		var htmlText:String = "<i>Choose a drive: </i><br/>";
-
-		for (i in 0...rootDirs.length) {
-			if (i == selectedDriveIdx) {
-				htmlText += "<b><font color='#2FF0000'>";
-			}
-
-			htmlText += rootDirs[i].nativePath;
-
-			if (i == selectedDriveIdx) {
-				htmlText += "</font></b>";
-			}
-
-			htmlText += "<br/>";
-			
-		}
-
-		htmlText += "Press A or D to change drive, Enter to select";
-
-		directoriesTF.text = htmlText;	
+		contentTF.text = htmlText;
+		contentTF.isHtmlText = true;
 	}
 
 	public function refreshFiles():Void
@@ -542,7 +319,7 @@ class Game extends Sprite {
 
 		htmlText += "<br/>W/S to move, Enter to select, Backspace to go back";
 
-		directoriesTF.text = htmlText;
+		contentTF.text = htmlText;
 	}
 
 }
