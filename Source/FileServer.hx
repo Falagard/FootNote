@@ -2,7 +2,7 @@ package;
 
 import sys.net.Socket;
 import sys.net.Host;
-import sys.io.File;
+import sys.io.File as SysFile;
 import sys.io.FileOutput;
 import sys.FileSystem;
 import haxe.io.Input;
@@ -10,7 +10,7 @@ import haxe.io.Output;
 import haxe.io.Path;
 import haxe.Timer;
 import StringTools;
-import openfl.filesystem.File as OLFile;
+import openfl.filesystem.File;
 
 class FileServer {
     var server:Socket;
@@ -91,7 +91,7 @@ class FileServer {
     }
 
     function sendUploadForm(output:Output):Void {
-        var files = FileSystem.readDirectory(OLFile.documentsDirectory.nativePath);
+        var files = FileSystem.readDirectory(File.documentsDirectory.nativePath);
         var fileList = "";
         for (file in files) {
             if (StringTools.endsWith(file, ".txt")) {
@@ -123,7 +123,7 @@ class FileServer {
     function serveFileView(output:Output, filename:String):Void {
         try {
             var safeName = sanitizeFilename(filename);
-            var contents = File.getContent(OLFile.documentsDirectory + safeName);
+            var contents = SysFile.getContent(File.documentsDirectory + safeName);
             var html = '
                 <html>
                     <body>
@@ -142,7 +142,7 @@ class FileServer {
     function handleDelete(output:Output, filename:String):Void {
         try {
             var safeName = sanitizeFilename(filename);
-            var directory = OLFile.documentsDirectory.nativePath;
+            var directory = File.documentsDirectory.nativePath;
             var path = Path.join([directory, safeName]);
 
             if (FileSystem.exists(path)) {
@@ -178,8 +178,8 @@ class FileServer {
                 if (contentStart != -1) {
                     var content = part.substr(contentStart + 4).split("\r\n")[0];
                     var safeName = sanitizeFilename(filename);
-                    var fullPath = Path.join([OLFile.documentsDirectory.nativePath, safeName]);
-                    File.saveContent(fullPath, content);
+                    var fullPath = Path.join([File.documentsDirectory.nativePath, safeName]);
+                    SysFile.saveContent(fullPath, content);
                     savedFiles.push(safeName);
                 }
             }
