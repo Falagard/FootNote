@@ -1,5 +1,7 @@
 package;
 
+import openfl.filesystem.FileMode;
+import openfl.filesystem.FileStream;
 import openfl.events.SampleDataEvent;
 import starling.events.KeyboardEvent;
 import starling.text.TextField;
@@ -20,7 +22,7 @@ import openfl.events.Event;
 
 import sys.net.Socket;
 import sys.net.Host;
-import sys.io.File;
+import sys.io.File as SysFile;
 import sys.io.FileOutput;
 import sys.FileSystem;
 import haxe.io.Input;
@@ -44,16 +46,16 @@ class Game extends Sprite {
 
 	private static var sAssets:AssetManager;
 	public var selectedDriveIdx:Int = 0;
-	public var selectedDriveFiles:Array<openfl.filesystem.File>;
+	public var selectedDriveFiles:Array<File>;
 	public var selectedFileIdx:Int = 0;
 	public var contentTF:TextField;
 	public var fileText:String;
 	public var currentPageIdx:Int = 0; //for paging through lyrics
 	public var lines:Array<String> = [];
 	
-	var directoryStack:Array<openfl.filesystem.File> = [];
-	var currentDirectory:openfl.filesystem.File;
-	var currentDirectoryEntries:Array<openfl.filesystem.File> = []; // both files and folders
+	var directoryStack:Array<File> = [];
+	var currentDirectory:File;
+	var currentDirectoryEntries:Array<File> = []; // both files and folders
 
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
 
@@ -90,7 +92,7 @@ class Game extends Sprite {
 				img.alpha = 0.0;
 				contentTF.alpha = 1.0;
 
-				//var directory:openfl.filesystem.File = openfl.filesystem.File.documentsDirectory;
+				//var directory:File = File.documentsDirectory;
 
 				//directory.addEventListener(Event.SELECT, directorySelected);
 				//directory.browseForDirectory("Select Directory");
@@ -119,7 +121,7 @@ class Game extends Sprite {
 		
 		addChild(contentTF);
 
-		refreshCurrentDirectory(openfl.filesystem.File.documentsDirectory);
+		refreshCurrentDirectory(File.documentsDirectory);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 
@@ -130,7 +132,7 @@ class Game extends Sprite {
 	function directorySelected(event:Event):Void
 	{
 		//Cast the event target to a File object
-		var directory:openfl.filesystem.File = cast(event.target, openfl.filesystem.File);
+		var directory:File = cast(event.target, File);
 		currentState = STATE_FILES; // Set initial state to files
 		refreshCurrentDirectory(directory);
 	}
@@ -174,7 +176,7 @@ class Game extends Sprite {
 			currentState = STATE_LYRICS;
 			currentPageIdx = 0;
 
-			var fileStream = new openfl.filesystem.FileStream();
+			var fileStream = new FileStream();
 			fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void {
 				fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
 				lines = fileText.split("\n");
@@ -184,7 +186,7 @@ class Game extends Sprite {
 				contentTF.text = "Error loading file: " + selectedFile.name;
 				contentTF.isHtmlText = false;
 			});
-			fileStream.openAsync(selectedFile, openfl.filesystem.FileMode.READ);
+			fileStream.openAsync(selectedFile, FileMode.READ);
 			return;
 		}
 		else if(event.keyCode == BACK_KEY && currentState == STATE_FILES)
@@ -235,7 +237,7 @@ class Game extends Sprite {
 		}
     }
 
-	function refreshCurrentDirectory(dir:openfl.filesystem.File):Void {
+	function refreshCurrentDirectory(dir:File):Void {
 		currentDirectoryEntries = [];
 
 		var contents = dir.getDirectoryListing();
