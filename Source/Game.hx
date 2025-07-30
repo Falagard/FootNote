@@ -1,5 +1,6 @@
 package;
 
+import openfl.events.SampleDataEvent;
 import starling.events.KeyboardEvent;
 import starling.text.TextField;
 import openfl.filesystem.File;
@@ -26,6 +27,7 @@ import haxe.io.Input;
 import haxe.io.Output;
 import StringTools;
 import haxe.Timer;
+import haxe.io.Path;
 
 class Game extends Sprite {
 	
@@ -61,6 +63,7 @@ class Game extends Sprite {
 
 	var server:Socket = null;
 
+	var handlingClient:Bool = false;
 	
 	public function new () {
 		
@@ -123,7 +126,7 @@ class Game extends Sprite {
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 
-		final server = new Socket();
+		server = new Socket();
         server.bind(new Host("0.0.0.0"), 8080);
         server.listen(10);
         trace("Listening on http://localhost:8080");
@@ -132,23 +135,35 @@ class Game extends Sprite {
 
 		refreshCurrentDirectory(openfl.filesystem.File.documentsDirectory);
 
-		// Create a repeating timer that fires every 100ms
-        var timer = new Timer(100);
-        timer.run = function() {
-            try {
-                var client = server.accept();
-				if(client != null)
-				{	
-                	handleClient(client);
-				}
-            } catch (e:Dynamic) {
-                // No client waiting — do nothing
-            }
-
-            // You can also run other tasks here every 100ms
-        };
+		Timer.delay(() -> checkClients(), 100);
 
     }
+
+	function checkClients():Void {
+		if (server == null || handlingClient) {
+
+		}
+		else
+		{
+			var client:Socket = null;
+			try 
+			{
+				client = server.accept();
+				if (client != null) {
+					handlingClient = true;
+					handleClient(client);
+					handlingClient = false;
+				}
+			} catch (e:Dynamic) {
+				if(client != null) {
+					client.close();
+				}
+				handlingClient = false;
+			}
+		}
+
+		Timer.delay(() -> checkClients(), 100);
+	} 
 
 	static function handleClient(client:Socket):Void {
         final input = client.input;
@@ -247,7 +262,9 @@ class Game extends Sprite {
 	static function handleDelete(output:Output, filename:String):Void {
         try {
             var safeName = sanitizeFilename(filename);
-            var path = openfl.filesystem.File.documentsDirectory + safeName;
+            var directory = openfl.filesystem.File.documentsDirectory.nativePath;
+			var path = Path.join([directory, safeName]);
+
             if (FileSystem.exists(path)) {
                 FileSystem.deleteFile(path);
                 sendResponse(output, 200, 'Deleted "$safeName".<br><a href="/">Back</a>', "text/html");
@@ -282,7 +299,9 @@ class Game extends Sprite {
                     var content = part.substr(contentStart + 4);
                     content = content.split("\r\n")[0];
                     var safeName = sanitizeFilename(filename);
-                    File.saveContent(openfl.filesystem.File.documentsDirectory + safeName, content);
+					var directory = openfl.filesystem.File.documentsDirectory.nativePath;
+					var fullPath = Path.join([directory, safeName]);
+                    File.saveContent(fullPath, content);
                     savedFiles.push(safeName);
                 }
             }
