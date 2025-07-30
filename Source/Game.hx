@@ -60,9 +60,6 @@ class Game extends Sprite {
 	var FILES_PER_PAGE:Int = 12;
 	var filePage:Int = 0;
 
-	//var server:Socket = null;
-	//var handlingClient:Bool = false;
-
 	var fileServer:FileServer;
 	
 	public function new () {
