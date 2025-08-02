@@ -37,12 +37,12 @@ class Game extends Sprite {
 	public static inline var STATE_FILES:Int = 0;
 	public static inline var STATE_LYRICS:Int = 1;
 
-	public static inline var PREVIOUS_KEY:UInt = Keyboard.W;
-	public static inline var NEXT_KEY:UInt = Keyboard.S;
+	public static inline var PREVIOUS_KEY:UInt = Keyboard.LEFT;
+	public static inline var NEXT_KEY:UInt = Keyboard.RIGHT;
 	public static inline var SELECT_KEY:UInt = Keyboard.ENTER;
 	public static inline var BACK_KEY:UInt = Keyboard.BACKSPACE;
 
-	public static var MAX_LINES:Int = 12; //max number of pages to show in lyrics
+	public static var MAX_LINES:Int = 6; //max number of pages to show in lyrics
 
 	private static var sAssets:AssetManager;
 	public var selectedDriveIdx:Int = 0;
@@ -57,9 +57,11 @@ class Game extends Sprite {
 	var currentDirectory:File;
 	var currentDirectoryEntries:Array<File> = []; // both files and folders
 
+	public static inline var SELECTED_FILE_COLOR:String = "#7FB8FF"; // color for selected file in file list
+
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
 
-	var FILES_PER_PAGE:Int = 12;
+	var FILES_PER_PAGE:Int = 6;
 	var filePage:Int = 0;
 
 	var fileServer:FileServer;
@@ -72,6 +74,7 @@ class Game extends Sprite {
 
 	public function start(assets:AssetManager):Void
     {
+		
 		sAssets = assets;
         var texture = assets.getTexture("LoadingScreen");
         var img = new Image(texture);
@@ -101,27 +104,44 @@ class Game extends Sprite {
 
 		Starling.current.juggler.add(tween);
 
-        addChild(img);
+		//background quad, black
+		var quad:Quad = new Quad(Starling.current.stage.stageWidth, Starling.current.stage.stageHeight, 0x000000);
+		addChild(quad);
+
+		//loading screen image
+        addChild(img);	
 
 		var offset:Int = 10;
         var ttFont:String = "Ubuntu";
-        var ttFontSize:Int = 19;
+        var ttFontSize:Int = 30;
         
         contentTF = new TextField(300, 80, 
             "");
 
 		contentTF.alpha = 0.0;
 
-		contentTF.format.setTo(ttFont, ttFontSize, 0x33399);
+		contentTF.format.setTo(ttFont, ttFontSize, Color.WHITE);
+		//contentTF.format.color = Color.BLACK;
         contentTF.x = contentTF.y = offset;
         contentTF.border = true;
 		contentTF.isHtmlText = true;
 		contentTF.height = Starling.current.stage.stageHeight - offset * 2;
 		contentTF.width = Starling.current.stage.stageWidth - offset * 2;
+
+
+		
 		
 		addChild(contentTF);
 
-		refreshCurrentDirectory(File.documentsDirectory);
+		trace(File.applicationStorageDirectory.nativePath);
+
+		//Make sure there's a lyrics directory 
+		var directory:File = File.documentsDirectory;
+		directory = directory.resolvePath("FootNoteLyrics");
+
+		directory.createDirectory();
+
+		refreshCurrentDirectory(directory);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 
@@ -198,7 +218,7 @@ class Game extends Sprite {
 			}
 			return;
 		}
-		else if(event.keyCode == BACK_KEY && currentState == STATE_LYRICS)
+		else if((event.keyCode == BACK_KEY || event.keyCode == SELECT_KEY) && currentState == STATE_LYRICS)
 		{
 			currentState = STATE_FILES;
 
@@ -303,7 +323,7 @@ class Game extends Sprite {
 			var currentFile = currentDirectoryEntries[i];
 
 			if (i == selectedFileIdx) {
-				htmlText += "<b><font color='#2FF0000'>";
+				htmlText += "<b><font color='" + SELECTED_FILE_COLOR + "#2FF0000'>";
 			}
 
 			htmlText += currentFile.isDirectory ? "[DIR] " : "";
