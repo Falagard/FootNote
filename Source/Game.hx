@@ -1,5 +1,8 @@
 package;
 
+import starling.text.TextFormat;
+import openfl.geom.Rectangle;
+import starling.events.ResizeEvent;
 import openfl.filesystem.FileMode;
 import openfl.filesystem.FileStream;
 import openfl.events.SampleDataEvent;
@@ -36,6 +39,7 @@ class Game extends Sprite {
 	//add an enum for the different states
 	public static inline var STATE_FILES:Int = 0;
 	public static inline var STATE_LYRICS:Int = 1;
+	public static inline var STATE_OPENING_FILE:Int = 2;
 
 	public static inline var PREVIOUS_KEY:UInt = Keyboard.LEFT;
 	public static inline var NEXT_KEY:UInt = Keyboard.RIGHT;
@@ -49,6 +53,7 @@ class Game extends Sprite {
 	public var selectedDriveFiles:Array<File>;
 	public var selectedFileIdx:Int = 0;
 	public var contentTF:TextField;
+	var lyricsContainer:Sprite;
 	public var fileText:String;
 	public var currentPageIdx:Int = 0; //for paging through lyrics
 	public var lines:Array<String> = [];
@@ -58,6 +63,9 @@ class Game extends Sprite {
 	var currentDirectoryEntries:Array<File> = []; // both files and folders
 
 	public static inline var SELECTED_FILE_COLOR:String = "#7FB8FF"; // color for selected file in file list
+	public static inline var BACKGROUND_COLOR:Int = 0x000000; // background color for the game
+	public static inline var FONT_SIZE:Int = 30; // default font size for text fields
+	public static inline var FONT_NAME:String = "Ubuntu"; // default font name
 
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
 
@@ -65,6 +73,8 @@ class Game extends Sprite {
 	var filePage:Int = 0;
 
 	var fileServer:FileServer;
+
+	var backgroundQuad:Quad;
 	
 	public function new () {
 		
@@ -74,7 +84,8 @@ class Game extends Sprite {
 
 	public function start(assets:AssetManager):Void
     {
-		
+		//Starling.current.stage.skipUnchangedFrames = true;
+
 		sAssets = assets;
         var texture = assets.getTexture("LoadingScreen");
         var img = new Image(texture);
@@ -93,27 +104,23 @@ class Game extends Sprite {
 			{ 
 				//hide img 
 				img.alpha = 0.0;
-				contentTF.alpha = 1.0;
-
-				//var directory:File = File.documentsDirectory;
-
-				//directory.addEventListener(Event.SELECT, directorySelected);
-				//directory.browseForDirectory("Select Directory");
+				
+				changeState(STATE_FILES);
 					
 			};
 
 		Starling.current.juggler.add(tween);
 
 		//background quad, black
-		var quad:Quad = new Quad(Starling.current.stage.stageWidth, Starling.current.stage.stageHeight, 0x000000);
-		addChild(quad);
+		backgroundQuad = new Quad(Starling.current.stage.stageWidth, Starling.current.stage.stageHeight, BACKGROUND_COLOR);
+		addChild(backgroundQuad);
 
 		//loading screen image
         addChild(img);	
 
 		var offset:Int = 10;
-        var ttFont:String = "Ubuntu";
-        var ttFontSize:Int = 30;
+        var ttFont:String = FONT_NAME;
+        var ttFontSize:Int = FONT_SIZE;
         
         contentTF = new TextField(300, 80, 
             "");
@@ -121,33 +128,66 @@ class Game extends Sprite {
 		contentTF.alpha = 0.0;
 
 		contentTF.format.setTo(ttFont, ttFontSize, Color.WHITE);
-		//contentTF.format.color = Color.BLACK;
         contentTF.x = contentTF.y = offset;
         contentTF.border = true;
 		contentTF.isHtmlText = true;
 		contentTF.height = Starling.current.stage.stageHeight - offset * 2;
 		contentTF.width = Starling.current.stage.stageWidth - offset * 2;
 
-
-		
-		
 		addChild(contentTF);
+
+		lyricsContainer = new Sprite();
+		lyricsContainer.x = 10;
+		lyricsContainer.y = 10;
+		addChild(lyricsContainer);
 
 		trace(File.applicationStorageDirectory.nativePath);
 
 		//Make sure there's a lyrics directory 
 		var directory:File = File.documentsDirectory;
-		directory = directory.resolvePath("FootNoteLyrics");
+		directory = directory.resolvePath("FootNote");
 
 		directory.createDirectory();
 
+		currentDirectory = directory;
 		refreshCurrentDirectory(directory);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 
 		fileServer = new FileServer();
 
+		stage.addEventListener(Event.RESIZE, onResize);
+
     }
+
+	function onResize(e:ResizeEvent):Void 
+	{
+		// set rectangle dimensions for viewPort:
+		var viewPortRectangle:Rectangle = new Rectangle();
+		viewPortRectangle.width = e.width; viewPortRectangle.height = e.height;
+
+		// resize the viewport:
+		Starling.current.viewPort = viewPortRectangle;
+
+		// assign the new stage width and height:
+		stage.stageWidth = e.width;
+		stage.stageHeight = e.height;
+
+		backgroundQuad.width = Starling.current.stage.stageWidth;
+		backgroundQuad.height = Starling.current.stage.stageHeight;
+
+		contentTF.width = Starling.current.stage.stageWidth - 20;
+		contentTF.height = Starling.current.stage.stageHeight - 20;
+
+		if(currentState == STATE_LYRICS)
+		{
+			refreshLyrics();
+		}
+		else if(currentState == STATE_FILES)
+		{
+			refreshFiles();
+		}
+	}
 
 	function directorySelected(event:Event):Void
 	{
@@ -185,7 +225,11 @@ class Game extends Sprite {
 			var selectedFile = currentDirectoryEntries[selectedFileIdx];
 
 			if (selectedFile.isDirectory) {
-				directoryStack.push(currentDirectory);
+				if(currentDirectory != null)
+				{
+					directoryStack.push(currentDirectory);
+				}
+				
 				currentDirectory = selectedFile;
 				refreshCurrentDirectory(currentDirectory);
 				selectedFileIdx = 0;
@@ -193,25 +237,30 @@ class Game extends Sprite {
 			}
 
 			// It's a .txt file
-			currentState = STATE_LYRICS;
+			changeState(STATE_OPENING_FILE);
+
 			currentPageIdx = 0;
 
 			var fileStream = new FileStream();
 			fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void {
 				fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
-				lines = fileText.split("\n");
-				refreshLyrics();
+				lines = fileText.split("\n");	
+				
+				changeState(STATE_LYRICS);
 			});
 			fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
 				contentTF.text = "Error loading file: " + selectedFile.name;
 				contentTF.isHtmlText = false;
 			});
+
 			fileStream.openAsync(selectedFile, FileMode.READ);
+			
 			return;
 		}
 		else if(event.keyCode == BACK_KEY && currentState == STATE_FILES)
 		{
-			if (directoryStack.length > 0) {
+			var directoryStackLength = directoryStack.length;
+			if (directoryStackLength > 0) {
 				currentDirectory = directoryStack.pop();
 				refreshCurrentDirectory(currentDirectory);
 				selectedFileIdx = 0;
@@ -220,9 +269,7 @@ class Game extends Sprite {
 		}
 		else if((event.keyCode == BACK_KEY || event.keyCode == SELECT_KEY) && currentState == STATE_LYRICS)
 		{
-			currentState = STATE_FILES;
-
-			refreshFiles();
+			changeState(STATE_FILES);
 			
 			return;
 		}
@@ -257,6 +304,21 @@ class Game extends Sprite {
 		}
     }
 
+	function changeState(newState:Int):Void
+	{
+		currentState = newState;
+
+		if (currentState == STATE_FILES) {
+			contentTF.alpha = 1.0;
+			lyricsContainer.alpha = 0.0;
+			refreshFiles();
+		} else if (currentState == STATE_LYRICS) {
+			contentTF.text = "";
+			lyricsContainer.alpha = 1.0;
+			refreshLyrics();
+		}
+	}
+
 	function refreshCurrentDirectory(dir:File):Void {
 		currentDirectoryEntries = [];
 
@@ -277,34 +339,75 @@ class Game extends Sprite {
 
 	private function refreshLyrics():Void
 	{
-		//var selectedFile = selectedDriveFiles[selectedFileIdx];
-		//var htmlText:String = "<i>" + selectedFile.name + "</i><br/>";
-		var htmlText:String = "";
+		// Clear previous line text fields
+		while (lyricsContainer.numChildren > 0) {
+			lyricsContainer.removeChildAt(0, true); // dispose=true
+		}
 
-		//we can only show MAX_LINES lines at a time
 		var startIdx = currentPageIdx * MAX_LINES;
 		var endIdx = startIdx + MAX_LINES;
 
-		//for each line in fileText, add it to htmlText	
-		if (fileText != null) {
-	
-			var currIdx:Int = 0;
-			
-			for (line in lines) {
-				if(currIdx < startIdx) {
-					currIdx++;
-					continue;
-				}
-				if(currIdx > endIdx) {
-					break;
-				}
-				htmlText += line + "<br/>";
-				currIdx++;
-			}
+		var fontSize = FONT_SIZE;
+		var lineHeight = fontSize + 10;
+		var fontName = FONT_NAME;
+
+		// Determine how many lines we’ll actually display
+		var actualLines = 0;
+		for (i in startIdx...endIdx) {
+			if (i >= lines.length) break;
+			actualLines++;
 		}
 
-		contentTF.text = htmlText;
-		contentTF.isHtmlText = true;
+		var totalHeight = actualLines * lineHeight;
+
+		// Vertically center the container
+		var stageHeight = Starling.current.stage.stageHeight;
+		lyricsContainer.y = Math.floor((stageHeight - totalHeight) / 2);
+
+		var yOffset = 0;
+
+		for (i in startIdx...endIdx) {
+			if (i >= lines.length) break;
+
+			var lineText = StringTools.trim(lines[i]);			
+
+			// If lineText starts with "chords=", change color and remove "chords="
+			var textColor = Color.WHITE;
+			if (StringTools.startsWith(lineText, "chords=")) {
+				lineText = lineText.substr("chords=".length);
+
+				// Parse chords separated by spaces
+				var chords = lineText.split(" ");
+				var chordCount = chords.length;
+				var stageWidth = Starling.current.stage.stageWidth - 20;
+				var spacing = Math.floor(stageWidth / chordCount);
+
+				var xOffset = 10;
+				for (chord in chords) {
+					var chordTF = new TextField(spacing, lineHeight, chord);
+					chordTF.format.setTo(fontName, fontSize, 0xFFD700); // Gold color for chords
+					chordTF.x = xOffset;
+					chordTF.y = yOffset;
+					chordTF.border = false;
+					chordTF.autoScale = true;
+					chordTF.isHtmlText = false;
+					chordTF.format.horizontalAlign = starling.utils.Align.CENTER;
+					lyricsContainer.addChild(chordTF);
+					xOffset += spacing;
+				}
+			} else {
+				var tf = new TextField(Starling.current.stage.stageWidth - 20, lineHeight, lineText);
+				tf.format.setTo(fontName, fontSize, textColor);
+				tf.x = 10;
+				tf.y = yOffset;
+				tf.border = false;
+				tf.autoScale = true;
+				tf.isHtmlText = true;
+				tf.format.horizontalAlign = starling.utils.Align.LEFT;
+				lyricsContainer.addChild(tf);
+			}
+			yOffset += lineHeight;
+		}
 	}
 
 	public function refreshFiles():Void
@@ -323,7 +426,7 @@ class Game extends Sprite {
 			var currentFile = currentDirectoryEntries[i];
 
 			if (i == selectedFileIdx) {
-				htmlText += "<b><font color='" + SELECTED_FILE_COLOR + "#2FF0000'>";
+				htmlText += "<b><font color='" + SELECTED_FILE_COLOR + "'>";
 			}
 
 			htmlText += currentFile.isDirectory ? "[DIR] " : "";
@@ -335,8 +438,6 @@ class Game extends Sprite {
 
 			htmlText += "<br/>";
 		}
-
-		htmlText += "<br/>W/S to move, Enter to select, Backspace to go back";
 
 		contentTF.text = htmlText;
 	}
