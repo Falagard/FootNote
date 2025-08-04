@@ -1,5 +1,6 @@
 package;
 
+import starling.events.TouchPhase;
 import starling.text.TextFormat;
 import openfl.geom.Rectangle;
 import starling.events.ResizeEvent;
@@ -75,6 +76,10 @@ class Game extends Sprite {
 	var fileServer:FileServer;
 
 	var backgroundQuad:Quad;
+
+	private var touchStartX:Float = 0;
+    private var touchStartY:Float = 0;
+    private var isSwiping:Bool = false;
 	
 	public function new () {
 		
@@ -153,7 +158,7 @@ class Game extends Sprite {
 		refreshCurrentDirectory(directory);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
-
+		stage.addEventListener(TouchEvent.TOUCH, onTouch); // Add this line
 		fileServer = new FileServer();
 
 		stage.addEventListener(Event.RESIZE, onResize);
@@ -197,6 +202,45 @@ class Game extends Sprite {
 		refreshCurrentDirectory(directory);
 	}
 
+	// Handle swiping right and left to navigate lyrics 
+	private function onTouch(event:TouchEvent):Void
+	{
+		var touchBegan = event.getTouch(this, TouchPhase.BEGAN);
+        var touchMoved = event.getTouch(this, TouchPhase.MOVED);
+        var touchEnded = event.getTouch(this, TouchPhase.ENDED);
+
+        if (touchBegan != null) {
+            var pos = touchBegan.getLocation(this);
+            touchStartX = pos.x;
+            touchStartY = pos.y;
+            isSwiping = true;
+        }
+
+        if (touchEnded != null && isSwiping) {
+            isSwiping = false;
+            var endPos = touchEnded.getLocation(this);
+            var deltaX = endPos.x - touchStartX;
+            var deltaY = endPos.y - touchStartY;
+
+            // Set a minimum distance threshold to count as a swipe
+            var swipeThreshold = 50; // pixels
+            var verticalLimit = 100; // prevent diagonal swipes being counted
+
+            if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaY) < verticalLimit) {
+                if (deltaX > 0) {
+                    if (currentState == STATE_LYRICS)
+					{
+						nextLyricsPage();
+					}
+                } else {
+                    if (currentState == STATE_LYRICS)
+					{
+						previousLyricsPage();
+					}
+                }
+            }
+        }
+	}
 
 	private function onKeyDown(event:KeyboardEvent):Void
     {
@@ -275,34 +319,42 @@ class Game extends Sprite {
 		}
 		else if(event.keyCode == NEXT_KEY && currentState == STATE_LYRICS)
 		{
-	
-			//get number of pages
-			var totalPages:Int = Math.ceil(lines.length / MAX_LINES);
-
-			if (currentPageIdx + 1 > totalPages - 1) {
-				return;
-			}
-
-			currentPageIdx++;
-
-			refreshLyrics();
+			nextLyricsPage();
 			
 			return;
 		}
 		else if(event.keyCode == PREVIOUS_KEY && currentState == STATE_LYRICS)
 		{
-
-			currentPageIdx--;
-
-			if (currentPageIdx == -1) {
-				currentPageIdx = 0;
-			}
-
-			refreshLyrics();
+			previousLyricsPage();
 			
 			return;
 		}
     }
+
+	function nextLyricsPage():Void
+	{
+		//get number of pages
+		var totalPages:Int = Math.ceil(lines.length / MAX_LINES);
+
+		if (currentPageIdx + 1 > totalPages - 1) {
+			return;
+		}
+
+		currentPageIdx++;
+
+		refreshLyrics();
+	}
+
+	function previousLyricsPage():Void
+	{
+		currentPageIdx--;
+
+		if (currentPageIdx == -1) {
+			currentPageIdx = 0;
+		}
+
+		refreshLyrics();
+	}
 
 	function changeState(newState:Int):Void
 	{
