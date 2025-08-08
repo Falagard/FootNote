@@ -40,7 +40,7 @@ class FileServer {
                 handlingClient = false;
             }
         } catch (e:Dynamic) {
-            trace("Error accepting client: " + e);
+            //trace("Error accepting client: " + e);
             if (client != null) client.close();
             handlingClient = false;
         }
