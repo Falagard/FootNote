@@ -26,6 +26,7 @@ class FileServer {
         Timer.delay(() -> checkClients(), 100);
     }
 
+    // Add trace to checkClients
     function checkClients():Void {
         if (handlingClient) return;
 
@@ -33,11 +34,13 @@ class FileServer {
         try {
             client = server.accept();
             if (client != null) {
+                trace("Client connected: " + client.peer());
                 handlingClient = true;
                 handleClient(client);
                 handlingClient = false;
             }
         } catch (e:Dynamic) {
+            trace("Error accepting client: " + e);
             if (client != null) client.close();
             handlingClient = false;
         }
@@ -50,10 +53,12 @@ class FileServer {
         final output = client.output;
 
         var requestLine = input.readLine();
+        trace("Request line: " + requestLine);
         if (requestLine == null) return;
 
         var method = requestLine.split(" ")[0];
         var path = requestLine.split(" ")[1];
+        trace("Method: " + method + ", Path: " + path);
 
         var headers:Map<String, String> = new Map();
         var contentLength = 0;
@@ -61,6 +66,7 @@ class FileServer {
         var line:String;
 
         while ((line = input.readLine()) != "") {
+            trace("Header: " + line);
             var parts = line.split(": ");
             if (parts.length == 2) {
                 headers[parts[0].toLowerCase()] = parts[1];
@@ -76,21 +82,27 @@ class FileServer {
         if (method == "GET") {
             if (StringTools.startsWith(path, "/view?file=")) {
                 var filename = path.split("file=")[1];
+                trace("Serving file view: " + filename);
                 serveFileView(output, filename);
             } else if (StringTools.startsWith(path, "/delete?file=")) {
                 var filename = path.split("file=")[1];
+                trace("Deleting file: " + filename);
                 handleDelete(output, filename);
             } else {
+                trace("Sending upload form");
                 sendUploadForm(output);
             }
         } else if (method == "POST") {
+            trace("Handling upload, contentLength=" + contentLength + ", boundary=" + boundary);
             handleUpload(input, output, contentLength, boundary);
         }
 
+        trace("Closing client connection");
         client.close();
     }
 
     function sendUploadForm(output:Output):Void {
+        trace("Building upload form");
         var files = FileSystem.readDirectory(File.documentsDirectory.nativePath);
         var fileList = "";
         for (file in files) {
@@ -123,6 +135,7 @@ class FileServer {
     function serveFileView(output:Output, filename:String):Void {
         try {
             var safeName = sanitizeFilename(filename);
+            trace("Opening file for view: " + safeName);
             var contents = SysFile.getContent(File.documentsDirectory + safeName);
             var html = '
                 <html>
@@ -135,6 +148,7 @@ class FileServer {
             ';
             sendResponse(output, 200, html, "text/html");
         } catch (e) {
+            trace("Error viewing file: " + e);
             sendResponse(output, 404, "File not found", "text/plain");
         }
     }
@@ -144,25 +158,31 @@ class FileServer {
             var safeName = sanitizeFilename(filename);
             var directory = File.documentsDirectory.nativePath;
             var path = Path.join([directory, safeName]);
+            trace("Attempting to delete: " + path);
 
             if (FileSystem.exists(path)) {
                 FileSystem.deleteFile(path);
+                trace("Deleted file: " + path);
                 sendResponse(output, 200, 'Deleted "$safeName".<br><a href="/">Back</a>', "text/html");
             } else {
+                trace("File not found for delete: " + path);
                 sendResponse(output, 404, "File not found", "text/plain");
             }
         } catch (e) {
+            trace("Error deleting file: " + e);
             sendResponse(output, 500, "Error deleting file", "text/plain");
         }
     }
 
     function handleUpload(input:Input, output:Output, contentLength:Int, boundary:String):Void {
         if (boundary == "") {
+            trace("Upload failed: missing boundary");
             sendResponse(output, 400, "Bad Request: Missing multipart boundary", "text/plain");
             return;
         }
 
         var body = input.read(contentLength).toString();
+        trace("Upload body length: " + body.length);
         var parts = body.split(boundary);
         var savedFiles = [];
 
@@ -172,29 +192,38 @@ class FileServer {
                 var nameEnd = part.indexOf('"', nameStart);
                 var filename = part.substr(nameStart, nameEnd - nameStart);
                 filename = filename.split("\\").pop();
-                if (!StringTools.endsWith(filename, ".txt")) continue;
+                trace("Found upload filename: " + filename);
+                if (!StringTools.endsWith(filename, ".txt")) {
+                    trace("Skipping non-txt file: " + filename);
+                    continue;
+                }
 
                 var contentStart = part.indexOf("\r\n\r\n");
                 if (contentStart != -1) {
                     var content = part.substr(contentStart + 4).split("\r\n")[0];
                     var safeName = sanitizeFilename(filename);
                     var fullPath = Path.join([File.documentsDirectory.nativePath, safeName]);
+                    trace("Saving file to: " + fullPath);
                     SysFile.saveContent(fullPath, content);
                     savedFiles.push(safeName);
                 }
             }
         }
 
+        trace("Upload complete, files: " + savedFiles.join(", "));
         sendResponse(output, 200, "Uploaded: " + savedFiles.join(", ") + "<br><a href='/'>Back</a>", "text/html");
     }
 
     function sanitizeFilename(name:String):String {
         var s1 = StringTools.replace(name, "..", "");
         var s2 = StringTools.replace(s1, "/", "_");
-        return StringTools.replace(s2, "\\", "_");
+        var result = StringTools.replace(s2, "\\", "_");
+        trace("Sanitized filename: " + result);
+        return result;
     }
 
     function sendResponse(output:Output, status:Int, body:String, contentType:String):Void {
+        trace('Sending response: $status, Content-Type: $contentType, Length: ${body.length}');
         output.writeString('HTTP/1.1 $status OK\r\n');
         output.writeString('Content-Type: $contentType\r\n');
         output.writeString('Content-Length: ${body.length}\r\n');
