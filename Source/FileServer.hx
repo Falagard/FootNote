@@ -103,7 +103,11 @@ class FileServer {
 
     function sendUploadForm(output:Output):Void {
         trace("Building upload form");
-        var files = FileSystem.readDirectory(File.documentsDirectory.nativePath);
+        
+        var directory:File = getDocumentsDirectory();
+
+        var files = FileSystem.readDirectory(directory.nativePath);
+
         var fileList = "";
         for (file in files) {
             if (StringTools.endsWith(file, ".txt")) {
@@ -134,9 +138,13 @@ class FileServer {
 
     function serveFileView(output:Output, filename:String):Void {
         try {
-            var safeName = sanitizeFilename(filename);
+            // urlDecode the filename
+            var decodedName = StringTools.urlDecode(filename);
+            var safeName = sanitizeFilename(decodedName);
             trace("Opening file for view: " + safeName);
-            var contents = SysFile.getContent(File.documentsDirectory + safeName);
+            var directory = getDocumentsDirectory();
+            var filePath = Path.join([directory.nativePath, safeName]);
+            var contents = SysFile.getContent(filePath);
             var html = '
                 <html>
                     <body>
@@ -155,9 +163,10 @@ class FileServer {
 
     function handleDelete(output:Output, filename:String):Void {
         try {
-            var safeName = sanitizeFilename(filename);
-            var directory = File.documentsDirectory.nativePath;
-            var path = Path.join([directory, safeName]);
+            var decodedName = StringTools.urlDecode(filename);
+            var safeName = sanitizeFilename(decodedName);
+            var directory = getDocumentsDirectory();
+            var path = Path.join([directory.nativePath, safeName]);
             trace("Attempting to delete: " + path);
 
             if (FileSystem.exists(path)) {
@@ -172,6 +181,15 @@ class FileServer {
             trace("Error deleting file: " + e);
             sendResponse(output, 500, "Error deleting file", "text/plain");
         }
+    }
+
+    function getDocumentsDirectory():File {
+        var directory:File = File.documentsDirectory;
+        directory = directory.resolvePath("FootNote");
+        if (!directory.exists) {
+            directory.createDirectory();
+        }
+        return directory;
     }
 
     function handleUpload(input:Input, output:Output, contentLength:Int, boundary:String):Void {
@@ -202,7 +220,10 @@ class FileServer {
                 if (contentStart != -1) {
                     var content = part.substr(contentStart + 4).split("\r\n")[0];
                     var safeName = sanitizeFilename(filename);
-                    var fullPath = Path.join([File.documentsDirectory.nativePath, safeName]);
+
+                    var directory = getDocumentsDirectory();
+
+                    var fullPath = Path.join([directory.nativePath, safeName]);
                     trace("Saving file to: " + fullPath);
                     SysFile.saveContent(fullPath, content);
                     savedFiles.push(safeName);
