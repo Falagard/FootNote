@@ -218,7 +218,7 @@ class FileServer {
 
                 var contentStart = part.indexOf("\r\n\r\n");
                 if (contentStart != -1) {
-                    var content = part.substr(contentStart + 4).split("\r\n")[0];
+                    var content = part.substr(contentStart + 4); //.split("\r\n")[0];
                     var safeName = sanitizeFilename(filename);
 
                     var directory = getDocumentsDirectory();
