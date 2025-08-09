@@ -41,6 +41,7 @@ class Game extends Sprite {
 	public static inline var STATE_FILES:Int = 0;
 	public static inline var STATE_LYRICS:Int = 1;
 	public static inline var STATE_OPENING_FILE:Int = 2;
+	public static inline var STATE_MENU:Int = -1; // Add menu state
 
 	public static inline var PREVIOUS_KEY:UInt = Keyboard.LEFT;
 	public static inline var NEXT_KEY:UInt = Keyboard.RIGHT;
@@ -54,6 +55,7 @@ class Game extends Sprite {
 	public var selectedDriveFiles:Array<File>;
 	public var selectedFileIdx:Int = 0;
 	public var contentTF:TextField;
+	private var menuTF:TextField; // Menu textfield
 	var lyricsContainer:Sprite;
 	public var fileText:String;
 	public var currentPageIdx:Int = 0; //for paging through lyrics
@@ -110,7 +112,7 @@ class Game extends Sprite {
 				//hide img 
 				img.alpha = 0.0;
 				
-				changeState(STATE_FILES);
+				changeState(STATE_MENU);
 					
 			};
 
@@ -163,6 +165,19 @@ class Game extends Sprite {
 
 		stage.addEventListener(Event.RESIZE, onResize);
 
+		// Add menu textfield
+		menuTF = new TextField(400, 120, "");
+		menuTF.format.setTo(FONT_NAME, FONT_SIZE, Color.WHITE);
+		menuTF.x = menuTF.y = offset;
+		menuTF.border = true;
+		menuTF.isHtmlText = true;
+		menuTF.visible = false;
+		menuTF.height = Starling.current.stage.stageHeight - offset * 2;
+		menuTF.width = Starling.current.stage.stageWidth - offset * 2;
+		addChild(menuTF);
+
+		//changeState(STATE_MENU); // Start in menu state
+
     }
 
 	function onResize(e:ResizeEvent):Void 
@@ -192,6 +207,14 @@ class Game extends Sprite {
 		{
 			refreshFiles();
 		}
+	}
+
+	function getLyricsDirectory():File
+	{
+		var directory:File = File.documentsDirectory;
+		directory = directory.resolvePath("FootNote");
+
+		return directory;
 	}
 
 	function directorySelected(event:Event):Void
@@ -244,6 +267,21 @@ class Game extends Sprite {
 
 	private function onKeyDown(event:KeyboardEvent):Void
     {
+		if (currentState == STATE_MENU) 
+		{
+			if (event.keyCode == Keyboard.NUMBER_1 || event.keyCode == Keyboard.NUMPAD_1) 
+			{
+				// Scan USB
+				detectUSBAndCopyDirectory();
+				menuTF.text = "<b>Scanning USB...</b><br/><br/>Press 2 to view lyric files.";
+			} else if (event.keyCode == Keyboard.NUMBER_2 || event.keyCode == Keyboard.NUMPAD_2)
+			{
+				// View Lyric Files
+				changeState(STATE_FILES);
+			}
+
+        	return;
+    	}
 		if(event.keyCode == PREVIOUS_KEY && currentState == STATE_FILES)
 		{
 			selectedFileIdx--;
@@ -360,7 +398,24 @@ class Game extends Sprite {
 	{
 		currentState = newState;
 
-		if (currentState == STATE_FILES) {
+		if (currentState == STATE_MENU) 
+		{
+			menuTF.visible = true;
+			contentTF.visible = false;
+			lyricsContainer.visible = false;
+			menuTF.text = "<b>Menu</b><br/><br/>" +
+				"1. Copy Files From USB<br/>" +
+				"2. View Lyric Files<br/><br/>" +
+				"<i>Press 1 or 2 to select</i>";
+    	} 	
+		else 
+		{
+			menuTF.visible = false;
+			contentTF.visible = true;
+			lyricsContainer.visible = true;
+		}
+
+    	if (currentState == STATE_FILES) {
 			contentTF.alpha = 1.0;
 			lyricsContainer.alpha = 0.0;
 			refreshFiles();
@@ -493,5 +548,108 @@ class Game extends Sprite {
 
 		contentTF.text = htmlText;
 	}
+
+    private function detectUSBAndCopyDirectory():Void 
+    {
+        var usbRoot:File = detectUSBDrive();
+
+        if (usbRoot == null || !usbRoot.exists) {
+            trace("No USB drive found.");
+            return;
+        }
+
+        trace("USB drive found at: " + usbRoot.nativePath);
+
+        var documentsDir:File = getLyricsDirectory();
+        copyDirectoryOptimized(usbRoot, documentsDir);
+
+        trace("Copy complete!");
+    }
+
+    private function detectUSBDrive():File
+    {
+        #if windows
+        for (letter in "DEFGHIJKLMNOPQRSTUVWXYZ".split("")) {
+            var path = letter + ":/";
+            if (FileSystem.exists(path)) {
+                try {
+                    var contents = FileSystem.readDirectory(path);
+                    if (contents.length > 0) {
+                        return new File(path);
+                    }
+                } catch (e:Dynamic) {}
+            }
+        }
+        #elseif mac
+        var volDir = "/Volumes";
+        if (FileSystem.exists(volDir)) {
+            for (name in FileSystem.readDirectory(volDir)) {
+                if (name != "Macintosh HD" && !name.startsWith(".")) {
+                    var fullPath = volDir + "/" + name;
+                    return new File(fullPath);
+                }
+            }
+        }
+        #elseif linux
+        var username = Sys.getEnv("USER");
+        var mediaDir = "/media/" + username;
+        if (FileSystem.exists(mediaDir)) {
+            for (name in FileSystem.readDirectory(mediaDir)) {
+                var fullPath = mediaDir + "/" + name;
+                return new File(fullPath);
+            }
+        }
+        #end
+        return null;
+    }
+
+    private function copyDirectoryOptimized(source:File, destination:File):Void 
+    {
+        if (!source.exists) return;
+
+        var files:Array<File> = source.getDirectoryListing();
+        for (file in files) 
+        {
+            var destFile:File = destination.resolvePath(file.name);
+
+            if (file.isDirectory) 
+            {
+                if (!destFile.exists) {
+                    destFile.createDirectory();
+                }
+                copyDirectoryOptimized(file, destFile);
+            } 
+            else 
+            {
+                if (shouldCopyFile(file, destFile)) {
+                    copyFile(file, destFile);
+                } else {
+                    trace("Skipped (unchanged): " + file.nativePath);
+                }
+            }
+        }
+    }
+
+    private function shouldCopyFile(source:File, destination:File):Bool
+    {
+        if (!destination.exists) return true;
+
+        var srcStat = FileSystem.stat(source.nativePath);
+        var dstStat = FileSystem.stat(destination.nativePath);
+
+        // Copy if file sizes differ or source is newer
+        if (srcStat.size != dstStat.size) return true;
+        if (srcStat.mtime.getTime() > dstStat.mtime.getTime()) return true;
+
+        return false;
+    }
+
+    private function copyFile(source:File, destination:File):Void 
+    {
+		source.copyTo(destination, true);
+
+        trace("Copied: " + source.nativePath + " → " + destination.nativePath);
+    }
+
 
 }
