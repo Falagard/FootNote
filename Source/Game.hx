@@ -56,6 +56,7 @@ class Game extends Sprite {
 	public var selectedFileIdx:Int = 0;
 	public var contentTF:TextField;
 	private var menuTF:TextField; // Menu textfield
+	private var alertTF:TextField; // Alert textfield
 	private var selectedMenuIdx:Int = 0; // 0 = Scan USB, 1 = View Lyric Files
 	var lyricsContainer:Sprite;
 	public var fileText:String;
@@ -84,15 +85,16 @@ class Game extends Sprite {
     private var touchStartY:Float = 0;
     private var isSwiping:Bool = false;
 	
+	private var alertBackgroundQuad:Quad; // Add this line
+
 	public function new () {
 		
 		super ();
-		
+	
 	}
 
 	public function start(assets:AssetManager):Void
     {
-		//Starling.current.stage.skipUnchangedFrames = true;
 
 		sAssets = assets;
         var texture = assets.getTexture("LoadingScreen");
@@ -176,6 +178,31 @@ class Game extends Sprite {
 		menuTF.height = Starling.current.stage.stageHeight - offset * 2;
 		menuTF.width = Starling.current.stage.stageWidth - offset * 2;
 		addChild(menuTF);
+
+		// Add alert background quad (behind alertTF)
+		alertBackgroundQuad = new Quad(
+			Starling.current.stage.stageWidth - offset * 2,
+			Starling.current.stage.stageHeight - offset * 2,
+			0x222222
+		);
+		alertBackgroundQuad.alpha = 0.85;
+		alertBackgroundQuad.x = offset;
+		alertBackgroundQuad.y = offset;
+		alertBackgroundQuad.visible = false;
+		addChild(alertBackgroundQuad);
+
+		// Add alert textfield
+		alertTF = new TextField(400, 120, "");
+		alertTF.format.setTo(FONT_NAME, FONT_SIZE, Color.WHITE);
+		alertTF.x = alertTF.y = offset;
+		alertTF.border = true;
+		alertTF.isHtmlText = true;
+		alertTF.visible = false;
+		alertTF.height = Starling.current.stage.stageHeight - offset * 2;
+		alertTF.width = Starling.current.stage.stageWidth - offset * 2;
+		addChild(alertTF);
+
+		
 
 		//changeState(STATE_MENU); // Start in menu state
 
@@ -266,6 +293,20 @@ class Game extends Sprite {
         }
 	}
 
+	private function showAlert(message:String):Void
+	{
+		alertTF.text = message;
+		alertTF.visible = true;
+		alertBackgroundQuad.visible = true;
+
+		// Hide alert after 3 seconds
+		Timer.delay(() -> {
+			alertTF.visible = false;
+			alertBackgroundQuad.visible = false;
+			alertTF.text = "";
+		}, 3000);
+	}
+
 	private function onKeyDown(event:KeyboardEvent):Void
     {
     	if (currentState == STATE_MENU) 
@@ -286,7 +327,9 @@ class Game extends Sprite {
 				if (selectedMenuIdx == 0) {
 					// Scan USB
 					detectUSBAndCopyDirectory();
-					menuTF.text = "<b>Scanning USB...</b><br/><br/>Press 2 to view lyric files.";
+
+					//menuTF.text = "<b>Scanning USB...</b><br/><br/>Press 2 to view lyric files.";
+
 				} else if (selectedMenuIdx == 1) {
 					// View Lyric Files
 					changeState(STATE_FILES);
@@ -586,6 +629,9 @@ class Game extends Sprite {
 
         if (usbRoot == null || !usbRoot.exists) {
             trace("No USB drive found.");
+
+			showAlert("No USB drive found. Please connect a USB drive and try again.");
+
             return;
         }
 
@@ -595,6 +641,11 @@ class Game extends Sprite {
         copyDirectoryOptimized(usbRoot, documentsDir);
 
         trace("Copy complete!");
+
+		showAlert("Copy complete! Files from USB have been copied to FootNote directory.");
+
+		// Refresh the current directory to show the newly copied files
+		refreshCurrentDirectory(documentsDir);
     }
 
     private function detectUSBDrive():File
