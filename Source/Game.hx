@@ -56,6 +56,7 @@ class Game extends Sprite {
 	public var selectedFileIdx:Int = 0;
 	public var contentTF:TextField;
 	private var menuTF:TextField; // Menu textfield
+	private var selectedMenuIdx:Int = 0; // 0 = Scan USB, 1 = View Lyric Files
 	var lyricsContainer:Sprite;
 	public var fileText:String;
 	public var currentPageIdx:Int = 0; //for paging through lyrics
@@ -267,18 +268,30 @@ class Game extends Sprite {
 
 	private function onKeyDown(event:KeyboardEvent):Void
     {
-		if (currentState == STATE_MENU) 
+    if (currentState == STATE_MENU) 
 		{
-			if (event.keyCode == Keyboard.NUMBER_1 || event.keyCode == Keyboard.NUMPAD_1) 
-			{
-				// Scan USB
-				detectUSBAndCopyDirectory();
-				menuTF.text = "<b>Scanning USB...</b><br/><br/>Press 2 to view lyric files.";
-			} 
-			else if (event.keyCode == Keyboard.NUMBER_2 || event.keyCode == Keyboard.NUMPAD_2)
-			{
-				// View Lyric Files
-				changeState(STATE_FILES);
+			if (event.keyCode == NEXT_KEY) {
+				selectedMenuIdx++;
+				if (selectedMenuIdx > 1) selectedMenuIdx = 0;
+				updateMenuText();
+				return;
+			}
+			else if (event.keyCode == PREVIOUS_KEY) {
+				selectedMenuIdx--;
+				if (selectedMenuIdx < 0) selectedMenuIdx = 1;
+				updateMenuText();
+				return;
+			}
+			else if (event.keyCode == SELECT_KEY) {
+				if (selectedMenuIdx == 0) {
+					// Scan USB
+					detectUSBAndCopyDirectory();
+					menuTF.text = "<b>Scanning USB...</b><br/><br/>Press 2 to view lyric files.";
+				} else if (selectedMenuIdx == 1) {
+					// View Lyric Files
+					changeState(STATE_FILES);
+				}
+				return;
 			}
 			return;
 		}
@@ -397,17 +410,15 @@ class Game extends Sprite {
 
 	function changeState(newState:Int):Void
 	{
-		currentState = newState;
+    currentState = newState;
 
-		if (currentState == STATE_MENU) 
+    if (currentState == STATE_MENU) 
 		{
+			selectedMenuIdx = 0; // Reset menu selection
 			menuTF.visible = true;
 			contentTF.visible = false;
 			lyricsContainer.visible = false;
-			menuTF.text = "<b>Menu</b><br/><br/>" +
-				"1. Copy Files From USB<br/>" +
-				"2. View Lyric Files<br/><br/>" +
-				"<i>Press 1 or 2 to select</i>";
+			updateMenuText();
     	} 	
 		else 
 		{
@@ -426,6 +437,24 @@ class Game extends Sprite {
 			refreshLyrics();
 		}
 	}
+
+	// Add this helper to update menu text with selection highlight
+	private function updateMenuText():Void {
+    var menuOptions = [
+        "1. Copy Files From USB",
+        "2. View Lyric Files"
+    ];
+    var html = "<b>Menu</b><br/><br/>";
+    for (i in 0...menuOptions.length) {
+        if (i == selectedMenuIdx) {
+            html += "<font color='#7FB8FF'><b>" + menuOptions[i] + "</b></font><br/>";
+        } else {
+            html += menuOptions[i] + "<br/>";
+        }
+    }
+    html += "<br/><i>Use ←/→ to select, Enter to confirm</i>";
+    menuTF.text = html;
+}
 
 	function refreshCurrentDirectory(dir:File):Void {
 		currentDirectoryEntries = [];
