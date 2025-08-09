@@ -274,100 +274,101 @@ class Game extends Sprite {
 				// Scan USB
 				detectUSBAndCopyDirectory();
 				menuTF.text = "<b>Scanning USB...</b><br/><br/>Press 2 to view lyric files.";
-			} else if (event.keyCode == Keyboard.NUMBER_2 || event.keyCode == Keyboard.NUMPAD_2)
+			} 
+			else if (event.keyCode == Keyboard.NUMBER_2 || event.keyCode == Keyboard.NUMPAD_2)
 			{
 				// View Lyric Files
 				changeState(STATE_FILES);
 			}
-
-        	return;
-    	}
-		if(event.keyCode == PREVIOUS_KEY && currentState == STATE_FILES)
-		{
-			selectedFileIdx--;
-			if (selectedFileIdx < 0) {
-				selectedFileIdx = currentDirectoryEntries.length - 1;
-			}
-			refreshFiles();
 			return;
 		}
-		else if(event.keyCode == NEXT_KEY && currentState == STATE_FILES)
+		else if (currentState == STATE_FILES)
 		{
-			selectedFileIdx++;
-			
-			if (selectedFileIdx > currentDirectoryEntries.length - 1) {
-				selectedFileIdx = 0;
-			}
-
-			refreshFiles();
-			return;
-		}
-		else if(event.keyCode == SELECT_KEY && currentState == STATE_FILES)
-		{
-			var selectedFile = currentDirectoryEntries[selectedFileIdx];
-
-			if (selectedFile.isDirectory) {
-				if(currentDirectory != null)
-				{
-					directoryStack.push(currentDirectory);
+			if (event.keyCode == PREVIOUS_KEY)
+			{
+				selectedFileIdx--;
+				if (selectedFileIdx < 0) {
+					selectedFileIdx = currentDirectoryEntries.length - 1;
 				}
-				
-				currentDirectory = selectedFile;
-				refreshCurrentDirectory(currentDirectory);
-				selectedFileIdx = 0;
+				refreshFiles();
 				return;
 			}
-
-			// It's a .txt file
-			changeState(STATE_OPENING_FILE);
-
-			currentPageIdx = 0;
-
-			var fileStream = new FileStream();
-			fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void {
-				fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
-				lines = fileText.split("\n");	
-				
-				changeState(STATE_LYRICS);
-			});
-			fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
-				contentTF.text = "Error loading file: " + selectedFile.name;
-				contentTF.isHtmlText = false;
-			});
-
-			fileStream.openAsync(selectedFile, FileMode.READ);
-			
-			return;
-		}
-		else if(event.keyCode == BACK_KEY && currentState == STATE_FILES)
-		{
-			var directoryStackLength = directoryStack.length;
-			if (directoryStackLength > 0) {
-				currentDirectory = directoryStack.pop();
-				refreshCurrentDirectory(currentDirectory);
-				selectedFileIdx = 0;
+			else if (event.keyCode == NEXT_KEY)
+			{
+				selectedFileIdx++;
+				if (selectedFileIdx > currentDirectoryEntries.length - 1) {
+					selectedFileIdx = 0;
+				}
+				refreshFiles();
+				return;
 			}
-			return;
+			else if (event.keyCode == SELECT_KEY)
+			{
+				var selectedFile = currentDirectoryEntries[selectedFileIdx];
+
+				if (selectedFile.isDirectory) {
+					if(currentDirectory != null)
+					{
+						directoryStack.push(currentDirectory);
+					}
+					
+					currentDirectory = selectedFile;
+					refreshCurrentDirectory(currentDirectory);
+					selectedFileIdx = 0;
+					return;
+				}
+
+				// It's a .txt file
+				changeState(STATE_OPENING_FILE);
+
+				currentPageIdx = 0;
+
+				var fileStream = new FileStream();
+				fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void {
+					fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
+					lines = fileText.split("\n");	
+					
+					changeState(STATE_LYRICS);
+				});
+				fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
+					contentTF.text = "Error loading file: " + selectedFile.name;
+					contentTF.isHtmlText = false;
+				});
+
+				fileStream.openAsync(selectedFile, FileMode.READ);
+				
+				return;
+			}
+			else if (event.keyCode == BACK_KEY)
+			{
+				var directoryStackLength = directoryStack.length;
+				if (directoryStackLength > 0) {
+					currentDirectory = directoryStack.pop();
+					refreshCurrentDirectory(currentDirectory);
+					selectedFileIdx = 0;
+				}
+				return;
+			}
 		}
-		else if((event.keyCode == BACK_KEY || event.keyCode == SELECT_KEY) && currentState == STATE_LYRICS)
+		else if (currentState == STATE_LYRICS)
 		{
-			changeState(STATE_FILES);
-			
-			return;
+			if (event.keyCode == BACK_KEY || event.keyCode == SELECT_KEY)
+			{
+				changeState(STATE_FILES);
+				return;
+			}
+			else if (event.keyCode == NEXT_KEY)
+			{
+				nextLyricsPage();
+				return;
+			}
+			else if (event.keyCode == PREVIOUS_KEY)
+			{
+				previousLyricsPage();
+				return;
+			}
 		}
-		else if(event.keyCode == NEXT_KEY && currentState == STATE_LYRICS)
-		{
-			nextLyricsPage();
-			
-			return;
-		}
-		else if(event.keyCode == PREVIOUS_KEY && currentState == STATE_LYRICS)
-		{
-			previousLyricsPage();
-			
-			return;
-		}
-    }
+	}
 
 	function nextLyricsPage():Void
 	{
