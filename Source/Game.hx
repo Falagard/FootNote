@@ -34,6 +34,8 @@ import haxe.io.Output;
 import StringTools;
 import haxe.Timer;
 import haxe.io.Path;
+import lime.ui.Gamepad;
+import lime.ui.GamepadButton;
 
 class Game extends Sprite {
 	
@@ -202,11 +204,87 @@ class Game extends Sprite {
 		alertTF.width = Starling.current.stage.stageWidth - offset * 2;
 		addChild(alertTF);
 
+		Gamepad.onConnect.add(gamepad_onConnect);
+
+		for (gamepad in Gamepad.devices)
+		{
+			gamepad_onConnect(gamepad);
+		}
+
 		
-
-		//changeState(STATE_MENU); // Start in menu state
-
     }
+
+	private function gamepad_onButtonDown(button:GamepadButton):Void
+	{
+		if(currentState == STATE_MENU)
+		{
+			if (button == GamepadButton.DPAD_UP) {
+				menuNavUp();
+				return;
+			}
+			else if (button == GamepadButton.DPAD_DOWN) {
+				menuNavDown();
+				return;
+			}
+			else if (button == GamepadButton.A) {
+				menuNavSelect();
+				return;
+			}
+			return;
+		}
+		else if (currentState == STATE_FILES)
+		{
+			if(button == GamepadButton.DPAD_UP)
+			{
+				fileNavUp();
+				return;
+			}
+			else if(button == GamepadButton.DPAD_DOWN)
+			{
+				fileNavDown();
+				return;
+			}
+			else if(button == GamepadButton.A)
+			{
+				fileNavSelect();
+				return;
+			}
+			else if(button == GamepadButton.B)
+			{
+				fileNavBack();
+				return;
+			}
+		}
+		else if(currentState == STATE_LYRICS)
+		{
+			if(button == GamepadButton.B || button == GamepadButton.A)
+			{
+				changeState(STATE_FILES);
+				return;
+			}
+			else if(button == GamepadButton.DPAD_RIGHT)
+			{
+				nextLyricsPage();
+				return;
+			}
+			else if(button == GamepadButton.DPAD_LEFT)
+			{
+				previousLyricsPage();
+				return;
+			}
+		}
+	}
+
+	private function gamepad_onButtonUp(button:GamepadButton):Void
+	{
+		
+	}
+
+	private function gamepad_onConnect(gamepad:Gamepad):Void
+	{
+		gamepad.onButtonDown.add(gamepad_onButtonDown);
+		gamepad.onButtonUp.add(gamepad_onButtonUp);
+	}
 
 	function onResize(e:ResizeEvent):Void 
 	{
@@ -307,33 +385,110 @@ class Game extends Sprite {
 		}, 3000);
 	}
 
+	private function menuNavDown():Void
+	{
+		selectedMenuIdx++;
+		if (selectedMenuIdx > 1) selectedMenuIdx = 0;
+		updateMenuText();
+	}
+
+	private function menuNavUp():Void
+	{
+		selectedMenuIdx--;
+		if (selectedMenuIdx < 0) selectedMenuIdx = 1;
+		updateMenuText();
+	}
+
+	private function menuNavSelect():Void
+	{
+		if (selectedMenuIdx == 0) {
+			// Scan USB
+			detectUSBAndCopyDirectory();
+
+		} else if (selectedMenuIdx == 1) {
+			// View Lyric Files
+			changeState(STATE_FILES);
+		}
+	}
+
+	private function fileNavUp():Void
+	{
+		selectedFileIdx--;
+		if (selectedFileIdx < 0) {
+			selectedFileIdx = currentDirectoryEntries.length - 1;
+		}
+		refreshFiles();
+	}
+
+	private function fileNavDown():Void
+	{
+		selectedFileIdx++;
+		if (selectedFileIdx > currentDirectoryEntries.length - 1) {
+			selectedFileIdx = 0;
+		}
+		refreshFiles();
+	}
+
+	private function fileNavSelect():Void
+	{
+		var selectedFile = currentDirectoryEntries[selectedFileIdx];
+
+		if (selectedFile.isDirectory) {
+			if(currentDirectory != null)
+			{
+				directoryStack.push(currentDirectory);
+			}
+			
+			currentDirectory = selectedFile;
+			refreshCurrentDirectory(currentDirectory);
+			selectedFileIdx = 0;
+			return;
+		}
+
+		// It's a .txt file
+		changeState(STATE_OPENING_FILE);
+
+		currentPageIdx = 0;
+
+		var fileStream = new FileStream();
+		fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void {
+			fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
+			lines = fileText.split("\n");	
+			
+			changeState(STATE_LYRICS);
+		});
+		fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
+			contentTF.text = "Error loading file: " + selectedFile.name;
+			contentTF.isHtmlText = false;
+		});
+
+		fileStream.openAsync(selectedFile, FileMode.READ);
+	}	
+
+	private function fileNavBack():Void
+	{
+		var directoryStackLength = directoryStack.length;
+		if (directoryStackLength > 0) {
+			currentDirectory = directoryStack.pop();
+			refreshCurrentDirectory(currentDirectory);
+			selectedFileIdx = 0;
+		}
+	}
+
 	private function onKeyDown(event:KeyboardEvent):Void
     {
     	if (currentState == STATE_MENU) 
 		{
 			if (event.keyCode == NEXT_KEY) {
-				selectedMenuIdx++;
-				if (selectedMenuIdx > 1) selectedMenuIdx = 0;
-				updateMenuText();
+				menuNavDown();
 				return;
 			}
 			else if (event.keyCode == PREVIOUS_KEY) {
-				selectedMenuIdx--;
-				if (selectedMenuIdx < 0) selectedMenuIdx = 1;
-				updateMenuText();
+				menuNavUp();
 				return;
 			}
 			else if (event.keyCode == SELECT_KEY) {
-				if (selectedMenuIdx == 0) {
-					// Scan USB
-					detectUSBAndCopyDirectory();
-
-					//menuTF.text = "<b>Scanning USB...</b><br/><br/>Press 2 to view lyric files.";
-
-				} else if (selectedMenuIdx == 1) {
-					// View Lyric Files
-					changeState(STATE_FILES);
-				}
+				menuNavSelect();
 				return;
 			}
 			return;
@@ -342,67 +497,22 @@ class Game extends Sprite {
 		{
 			if (event.keyCode == PREVIOUS_KEY)
 			{
-				selectedFileIdx--;
-				if (selectedFileIdx < 0) {
-					selectedFileIdx = currentDirectoryEntries.length - 1;
-				}
-				refreshFiles();
+				fileNavUp();
 				return;
 			}
 			else if (event.keyCode == NEXT_KEY)
 			{
-				selectedFileIdx++;
-				if (selectedFileIdx > currentDirectoryEntries.length - 1) {
-					selectedFileIdx = 0;
-				}
-				refreshFiles();
+				fileNavDown();
 				return;
 			}
 			else if (event.keyCode == SELECT_KEY)
 			{
-				var selectedFile = currentDirectoryEntries[selectedFileIdx];
-
-				if (selectedFile.isDirectory) {
-					if(currentDirectory != null)
-					{
-						directoryStack.push(currentDirectory);
-					}
-					
-					currentDirectory = selectedFile;
-					refreshCurrentDirectory(currentDirectory);
-					selectedFileIdx = 0;
-					return;
-				}
-
-				// It's a .txt file
-				changeState(STATE_OPENING_FILE);
-
-				currentPageIdx = 0;
-
-				var fileStream = new FileStream();
-				fileStream.addEventListener(openfl.events.Event.COMPLETE, function(e:openfl.events.Event):Void {
-					fileText = fileStream.readUTFBytes(fileStream.bytesAvailable);
-					lines = fileText.split("\n");	
-					
-					changeState(STATE_LYRICS);
-				});
-				fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
-					contentTF.text = "Error loading file: " + selectedFile.name;
-					contentTF.isHtmlText = false;
-				});
-
-				fileStream.openAsync(selectedFile, FileMode.READ);
-				
+				fileNavSelect();
 				return;
 			}
 			else if (event.keyCode == BACK_KEY)
 			{
-				var directoryStackLength = directoryStack.length;
-				if (directoryStackLength > 0) {
-					currentDirectory = directoryStack.pop();
-					refreshCurrentDirectory(currentDirectory);
-					selectedFileIdx = 0;
-				}
+				fileNavBack();
 				return;
 			}
 		}
