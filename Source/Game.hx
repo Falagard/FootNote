@@ -268,7 +268,7 @@ class Game extends Sprite {
 
 	private function onKeyDown(event:KeyboardEvent):Void
     {
-    if (currentState == STATE_MENU) 
+    	if (currentState == STATE_MENU) 
 		{
 			if (event.keyCode == NEXT_KEY) {
 				selectedMenuIdx++;
@@ -410,9 +410,9 @@ class Game extends Sprite {
 
 	function changeState(newState:Int):Void
 	{
-    currentState = newState;
+    	currentState = newState;
 
-    if (currentState == STATE_MENU) 
+    	if (currentState == STATE_MENU) 
 		{
 			selectedMenuIdx = 0; // Reset menu selection
 			menuTF.visible = true;
@@ -439,22 +439,23 @@ class Game extends Sprite {
 	}
 
 	// Add this helper to update menu text with selection highlight
-	private function updateMenuText():Void {
-    var menuOptions = [
-        "1. Copy Files From USB",
-        "2. View Lyric Files"
-    ];
-    var html = "<b>Menu</b><br/><br/>";
-    for (i in 0...menuOptions.length) {
-        if (i == selectedMenuIdx) {
-            html += "<font color='#7FB8FF'><b>" + menuOptions[i] + "</b></font><br/>";
-        } else {
-            html += menuOptions[i] + "<br/>";
-        }
-    }
-    html += "<br/><i>Use ←/→ to select, Enter to confirm</i>";
-    menuTF.text = html;
-}
+	private function updateMenuText():Void 
+	{
+		var menuOptions = [
+			"1. Copy Files From USB",
+			"2. View Lyric Files"
+		];
+		var html = "<b>Menu</b><br/><br/>";
+		for (i in 0...menuOptions.length) {
+			if (i == selectedMenuIdx) {
+				html += "<font color='#7FB8FF'><b>" + menuOptions[i] + "</b></font><br/>";
+			} else {
+				html += menuOptions[i] + "<br/>";
+			}
+		}
+		html += "<br/><i>Use ←/→ to select, Enter to confirm</i>";
+		menuTF.text = html;
+	}
 
 	function refreshCurrentDirectory(dir:File):Void {
 		currentDirectoryEntries = [];
