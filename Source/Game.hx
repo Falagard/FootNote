@@ -51,6 +51,9 @@ class Game extends Sprite {
 	public static inline var SELECT_KEY:UInt = Keyboard.ENTER;
 	public static inline var BACK_KEY:UInt = Keyboard.BACKSPACE;
 
+	private var baseWidth:Float = 640;
+    private var baseHeight:Float = 480;
+
 	public static var MAX_LINES:Int = 6; //max number of pages to show in lyrics
 
 	private static var sAssets:AssetManager;
@@ -107,11 +110,19 @@ class Game extends Sprite {
         var img = new Image(texture);
 		img.alpha = 0.0;
 
-		var stageWidth:Float = Starling.current.stage.stageWidth;
-		var scale = stageWidth / img.width;
+		var offset:Int = 10;
 
-        img.width = stageWidth;
-        img.height = img.height * scale;
+        // Calculate scaling factor based on stage size (relative to a base width, e.g., 1280)
+        var stageWidth:Float = Starling.current.stage.stageWidth;
+        var stageHeight:Float = Starling.current.stage.stageHeight;
+        var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
+
+        var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
+
+		var imgScale = stageWidth / img.width;
+
+		img.width = stageWidth;
+        img.height = img.height * imgScale;
 
 		var tween:Tween = new Tween(img, 3.0, Transitions.EASE_IN_OUT);
 		tween.animate("alpha", 1.0);
@@ -134,22 +145,14 @@ class Game extends Sprite {
 		//loading screen image
         addChild(img);	
 
-		var offset:Int = 10;
-        var ttFont:String = FONT_NAME;
-        var ttFontSize:Int = FONT_SIZE;
-        
-        contentTF = new TextField(300, 80, 
-            "");
-
+		contentTF = new TextField(300, 80, "");
 		contentTF.alpha = 0.0;
-
-		contentTF.format.setTo(ttFont, ttFontSize, Color.WHITE);
+		contentTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
         contentTF.x = contentTF.y = offset;
         contentTF.border = true;
 		contentTF.isHtmlText = true;
-		contentTF.height = Starling.current.stage.stageHeight - offset * 2;
-		contentTF.width = Starling.current.stage.stageWidth - offset * 2;
-
+		contentTF.height = stageHeight - offset * 2;
+		contentTF.width = stageWidth - offset * 2;
 		addChild(contentTF);
 
 		lyricsContainer = new Sprite();
@@ -177,19 +180,19 @@ class Game extends Sprite {
 
 		// Add menu textfield
 		menuTF = new TextField(400, 120, "");
-		menuTF.format.setTo(FONT_NAME, FONT_SIZE, Color.WHITE);
+		menuTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
 		menuTF.x = menuTF.y = offset;
 		menuTF.border = true;
 		menuTF.isHtmlText = true;
 		menuTF.visible = false;
-		menuTF.height = Starling.current.stage.stageHeight - offset * 2;
-		menuTF.width = Starling.current.stage.stageWidth - offset * 2;
+		menuTF.height = stageHeight - offset * 2;
+		menuTF.width = stageWidth - offset * 2;
 		addChild(menuTF);
 
 		// Add alert background quad (behind alertTF)
 		alertBackgroundQuad = new Quad(
-			Starling.current.stage.stageWidth - offset * 2,
-			Starling.current.stage.stageHeight - offset * 2,
+			stageWidth - offset * 2,
+			stageHeight - offset * 2,
 			0x222222
 		);
 		alertBackgroundQuad.alpha = 0.85;
@@ -200,13 +203,13 @@ class Game extends Sprite {
 
 		// Add alert textfield
 		alertTF = new TextField(400, 120, "");
-		alertTF.format.setTo(FONT_NAME, FONT_SIZE, Color.WHITE);
+		alertTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
 		alertTF.x = alertTF.y = offset;
 		alertTF.border = true;
 		alertTF.isHtmlText = true;
 		alertTF.visible = false;
-		alertTF.height = Starling.current.stage.stageHeight - offset * 2;
-		alertTF.width = Starling.current.stage.stageWidth - offset * 2;
+		alertTF.height = stageHeight - offset * 2;
+		alertTF.width = stageWidth - offset * 2;
 		addChild(alertTF);
 
 		Gamepad.onConnect.add(gamepad_onConnect);
@@ -307,8 +310,29 @@ class Game extends Sprite {
 		backgroundQuad.width = Starling.current.stage.stageWidth;
 		backgroundQuad.height = Starling.current.stage.stageHeight;
 
-		contentTF.width = Starling.current.stage.stageWidth - 20;
-		contentTF.height = Starling.current.stage.stageHeight - 20;
+		var offset:Int = 10;
+        
+        var stageWidth:Float = Starling.current.stage.stageWidth;
+        var stageHeight:Float = Starling.current.stage.stageHeight;
+        var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
+        var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
+
+		contentTF.width = stageWidth - offset * 2;
+		contentTF.height = stageHeight - offset * 2;
+		contentTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
+
+		menuTF.width = stageWidth - offset * 2;
+		menuTF.height = stageHeight - offset * 2;
+		menuTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
+
+		alertBackgroundQuad.width = stageWidth - offset * 2;
+		alertBackgroundQuad.height = stageHeight - offset * 2;
+		alertBackgroundQuad.x = offset;
+		alertBackgroundQuad.y = offset;
+
+		alertTF.width = stageWidth - offset * 2;
+		alertTF.height = stageHeight - offset * 2;
+		alertTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
 
 		if(currentState == STATE_LYRICS)
 		{
@@ -687,8 +711,16 @@ class Game extends Sprite {
 		var startIdx = currentPageIdx * MAX_LINES;
 		var endIdx = startIdx + MAX_LINES;
 
-		var fontSize = FONT_SIZE;
-		var lineHeight = fontSize + 10;
+		// Scale font size and line height based on resolution
+		var baseFontSize = FONT_SIZE;
+		var baseLineHeight = baseFontSize + 10;
+		//var baseWidth:Float = 1280;
+		//var baseHeight:Float = 720;
+		var stageWidth = Starling.current.stage.stageWidth;
+		var stageHeight = Starling.current.stage.stageHeight;
+		var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
+		var fontSize = Std.int(baseFontSize * scale);
+		var lineHeight = Std.int(baseLineHeight * scale);
 		var fontName = FONT_NAME;
 
 		// Determine how many lines we’ll actually display
@@ -701,7 +733,6 @@ class Game extends Sprite {
 		var totalHeight = actualLines * lineHeight;
 
 		// Vertically center the container
-		var stageHeight = Starling.current.stage.stageHeight;
 		lyricsContainer.y = Math.floor((stageHeight - totalHeight) / 2);
 
 		var yOffset = 0;
@@ -719,8 +750,7 @@ class Game extends Sprite {
 				// Parse chords separated by spaces
 				var chords = lineText.split(" ");
 				var chordCount = chords.length;
-				var stageWidth = Starling.current.stage.stageWidth - 20;
-				var spacing = Math.floor(stageWidth / chordCount);
+				var spacing = Math.floor((stageWidth - 20) / chordCount);
 
 				var xOffset = 10;
 				for (chord in chords) {
@@ -736,7 +766,7 @@ class Game extends Sprite {
 					xOffset += spacing;
 				}
 			} else {
-				var tf = new TextField(Starling.current.stage.stageWidth - 20, lineHeight, lineText);
+				var tf = new TextField(stageWidth - 20, lineHeight, lineText);
 				tf.format.setTo(fontName, fontSize, textColor);
 				tf.x = 10;
 				tf.y = yOffset;
