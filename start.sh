@@ -4,8 +4,8 @@
 
 cd /home/footnote/src/FootNote || exit 1
 
-# Run git checkout (just checkout current branch—if you want a specific branch, replace 'git checkout' with 'git checkout branchname')
-git checkout
+# Run git pull to ensure we have the latest changes
+git pull
 
 # Run lime test for linux
 lime test linux
