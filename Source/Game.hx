@@ -1,5 +1,6 @@
 package;
 
+import lime.system.System;
 import starling.events.TouchPhase;
 import starling.text.TextFormat;
 import openfl.geom.Rectangle;
@@ -73,8 +74,11 @@ class Game extends Sprite {
 	public static inline var BACKGROUND_COLOR:Int = 0x000000; // background color for the game
 	public static inline var FONT_SIZE:Int = 30; // default font size for text fields
 	public static inline var FONT_NAME:String = "Ubuntu"; // default font name
+	public static inline var SELECT_KEY_TIMEOUT:Float = 750; // timeout for select key long press in seconds
 
 	public var currentState:Int = 0; //are we looking at root drives, files, or lyrics?
+
+	private var selectKeyDownTime:Float = -1; // Track when SELECT_KEY is pressed
 
 	var FILES_PER_PAGE:Int = 6;
 	var filePage:Int = 0;
@@ -165,6 +169,7 @@ class Game extends Sprite {
 		refreshCurrentDirectory(directory);
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+		stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
 		stage.addEventListener(TouchEvent.TOUCH, onTouch); // Add this line
 		fileServer = new FileServer();
 
@@ -476,8 +481,15 @@ class Game extends Sprite {
 	}
 
 	private function onKeyDown(event:KeyboardEvent):Void
-    {
-    	if (currentState == STATE_MENU) 
+	{
+		if (event.keyCode == SELECT_KEY && selectKeyDownTime < 0) {
+            selectKeyDownTime = System.getTimer();
+        }
+	}
+
+	private function onKeyUp(event:KeyboardEvent):Void
+	{
+		if (currentState == STATE_MENU) 
 		{
 			if (event.keyCode == NEXT_KEY) {
 				menuNavDown();
@@ -523,9 +535,17 @@ class Game extends Sprite {
 				navLyricsBack();
 				return;
 			}
-			else if(event.keyCode == SELECT_KEY)
+			else if (event.keyCode == SELECT_KEY)
 			{
-				navLyricsBack();
+				// Long press detection: only trigger if held for SELECT_KEY_TIMEOUT or more
+				var delta = System.getTimer() - selectKeyDownTime;
+
+				trace("Select key released after " + delta + " milliseconds");
+
+				if (selectKeyDownTime > 0 && delta >= SELECT_KEY_TIMEOUT) {
+					navLyricsBack();
+				}
+				selectKeyDownTime = -1;
 				return;
 			}
 			else if (event.keyCode == NEXT_KEY)
