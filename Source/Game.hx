@@ -264,12 +264,12 @@ class Game extends Sprite {
 			}
 			else if(button == GamepadButton.DPAD_RIGHT)
 			{
-				nextLyricsPage();
+				navLyricsDown();
 				return;
 			}
 			else if(button == GamepadButton.DPAD_LEFT)
 			{
-				previousLyricsPage();
+				navLyricsUp();
 				return;
 			}
 		}
@@ -359,12 +359,12 @@ class Game extends Sprite {
                 if (deltaX > 0) {
                     if (currentState == STATE_LYRICS)
 					{
-						nextLyricsPage();
+						navLyricsDown();
 					}
                 } else {
                     if (currentState == STATE_LYRICS)
 					{
-						previousLyricsPage();
+						navLyricsUp();
 					}
                 }
             }
@@ -518,25 +518,30 @@ class Game extends Sprite {
 		}
 		else if (currentState == STATE_LYRICS)
 		{
-			if (event.keyCode == BACK_KEY || event.keyCode == SELECT_KEY)
+			if (event.keyCode == BACK_KEY)
 			{
-				changeState(STATE_FILES);
+				navLyricsBack();
+				return;
+			}
+			else if(event.keyCode == SELECT_KEY)
+			{
+				navLyricsBack();
 				return;
 			}
 			else if (event.keyCode == NEXT_KEY)
 			{
-				nextLyricsPage();
+				navLyricsDown();
 				return;
 			}
 			else if (event.keyCode == PREVIOUS_KEY)
 			{
-				previousLyricsPage();
+				navLyricsUp();
 				return;
 			}
 		}
 	}
 
-	function nextLyricsPage():Void
+	function navLyricsDown():Void
 	{
 		//get number of pages
 		var totalPages:Int = Math.ceil(lines.length / MAX_LINES);
@@ -550,7 +555,7 @@ class Game extends Sprite {
 		refreshLyrics();
 	}
 
-	function previousLyricsPage():Void
+	function navLyricsUp():Void
 	{
 		currentPageIdx--;
 
@@ -559,6 +564,11 @@ class Game extends Sprite {
 		}
 
 		refreshLyrics();
+	}
+
+	function navLyricsBack():Void
+	{
+		changeState(STATE_FILES);
 	}
 
 	function changeState(newState:Int):Void
