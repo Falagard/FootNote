@@ -407,12 +407,12 @@ class Game extends Sprite {
 	private function menuNavSelect():Void
 	{
 		if (selectedMenuIdx == 0) {
-			// Scan USB
-			detectUSBAndCopyDirectory();
-
-		} else if (selectedMenuIdx == 1) {
 			// View Lyric Files
 			changeState(STATE_FILES);
+			
+		} else if (selectedMenuIdx == 1) {
+			// Scan USB
+			detectUSBAndCopyDirectory();
 		}
 	}
 
@@ -478,6 +478,10 @@ class Game extends Sprite {
 			refreshCurrentDirectory(currentDirectory);
 			selectedFileIdx = 0;
 		}
+		else {
+			// No more directories in stack, go back to menu
+			changeState(STATE_MENU);
+		}
 	}
 
 	private function onKeyDown(event:KeyboardEvent):Void
@@ -519,8 +523,23 @@ class Game extends Sprite {
 			}
 			else if (event.keyCode == SELECT_KEY)
 			{
-				fileNavSelect();
-				return;
+				// Long press detection: only trigger if held for SELECT_KEY_TIMEOUT or more
+				var delta = System.getTimer() - selectKeyDownTime;
+
+				trace("Select key held for: " + delta + " ms");
+
+				if (selectKeyDownTime > 0 && delta >= SELECT_KEY_TIMEOUT) {
+					trace("fileNavBack() called due to long press");
+
+					fileNavBack();
+				}
+				else 
+				{
+					//short press, select file
+					trace("File selected: " + currentDirectoryEntries[selectedFileIdx].name);
+					fileNavSelect();
+				}
+				selectKeyDownTime = -1;
 			}
 			else if (event.keyCode == BACK_KEY)
 			{
@@ -539,8 +558,6 @@ class Game extends Sprite {
 			{
 				// Long press detection: only trigger if held for SELECT_KEY_TIMEOUT or more
 				var delta = System.getTimer() - selectKeyDownTime;
-
-				trace("Select key released after " + delta + " milliseconds");
 
 				if (selectKeyDownTime > 0 && delta >= SELECT_KEY_TIMEOUT) {
 					navLyricsBack();
@@ -595,6 +612,8 @@ class Game extends Sprite {
 	{
     	currentState = newState;
 
+		selectKeyDownTime = -1; // Reset select key timer
+
     	if (currentState == STATE_MENU) 
 		{
 			selectedMenuIdx = 0; // Reset menu selection
@@ -625,8 +644,8 @@ class Game extends Sprite {
 	private function updateMenuText():Void 
 	{
 		var menuOptions = [
-			"1. Copy Files From USB",
-			"2. View Lyric Files"
+			"1. View Lyric Files",
+			"2. Copy Files From USB"
 		];
 		var html = "<b>Menu</b><br/><br/>";
 		for (i in 0...menuOptions.length) {
