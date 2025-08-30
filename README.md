@@ -1,6 +1,8 @@
 # FootNote
 Haxe application used to load text files containing song lyics and use peripherals such as mouse and keyboard to navigate through lyrics. 
 
+git clone https://github.com/Falagard/FootNote
+
 sudo add-apt-repository ppa:haxe/releases -y
 sudo apt-get update
 sudo apt-get install haxe -y
@@ -25,7 +27,7 @@ haxelib install openfl
 git clone https://github.com/Falagard/openfl-samples
 haxelib dev openfl-samples openfl-samples
 
-git clone https://github.com/Falagard/FootNote
+
 
 sudo apt install g++-aarch64-linux-gnu
 
