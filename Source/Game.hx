@@ -232,6 +232,8 @@ class Game extends Sprite {
 
 	private function gamepad_onButtonDown(button:GamepadButton):Void
 	{
+		trace("Gamepad button down: " + button);
+
 		if(currentState == STATE_MENU)
 		{
 			if (button == GamepadButton.DPAD_UP) {
