@@ -86,7 +86,7 @@ class Game extends Sprite {
 	var FILES_PER_PAGE:Int = 6;
 	var filePage:Int = 0;
 
-	var fileServer:FileServer;
+	//var fileServer:FileServer;
 
 	var backgroundQuad:Quad;
 
@@ -174,7 +174,8 @@ class Game extends Sprite {
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 		stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
 		stage.addEventListener(TouchEvent.TOUCH, onTouch); // Add this line
-		fileServer = new FileServer();
+		
+		//fileServer = new FileServer();
 
 		stage.addEventListener(Event.RESIZE, onResize);
 
@@ -670,6 +671,29 @@ class Game extends Sprite {
 		} else if (currentState == STATE_LYRICS) {
 			contentTF.text = "";
 			lyricsContainer.alpha = 1.0;
+
+			//check if there's an audio file with the same name
+			var fileName = currentDirectoryEntries[selectedFileIdx].name;
+			var dotIdx = fileName.lastIndexOf(".");
+			var baseName = dotIdx != -1 ? fileName.substr(0, dotIdx) : fileName;
+			var audioFile:File = currentDirectory.resolvePath(baseName + ".wav");
+
+			if (audioFile.exists) {
+				try {
+					var fileStream = new FileStream();
+					fileStream.open(audioFile, FileMode.READ);
+					var bytes = new openfl.utils.ByteArray();
+					fileStream.readBytes(bytes, 0, fileStream.bytesAvailable);
+					fileStream.close();
+					var sound = new openfl.media.Sound();
+					bytes.position = 0;
+					sound.loadCompressedDataFromByteArray(bytes, bytes.length);
+					var channel = sound.play();
+				} catch (e:Dynamic) {
+					trace("Error playing audio: " + e);
+				}
+			}
+
 			refreshLyrics();
 		}
 	}
