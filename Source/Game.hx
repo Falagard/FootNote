@@ -106,9 +106,9 @@ class Game extends Sprite {
     {
 
 		sAssets = assets;
-        var texture = assets.getTexture("LoadingScreen");
-        var img = new Image(texture);
-		img.alpha = 0.0;
+        //var texture = assets.getTexture("LoadingScreen");
+        //var img = new Image(texture);
+		//img.alpha = 0.0;
 
 		var offset:Int = 10;
 
@@ -119,31 +119,33 @@ class Game extends Sprite {
 
         var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
 
-		var imgScale = stageWidth / img.width;
+		//var imgScale = stageWidth / img.width;
 
-		img.width = stageWidth;
-        img.height = img.height * imgScale;
+		//img.width = stageWidth;
+        //img.height = img.height * imgScale;
 
-		var tween:Tween = new Tween(img, 3.0, Transitions.EASE_IN_OUT);
-		tween.animate("alpha", 1.0);
+		//var tween:Tween = new Tween(img, 3.0, Transitions.EASE_IN_OUT);
+		//tween.animate("alpha", 1.0);
 		
-		tween.onComplete = function():Void 
-			{ 
+		//tween.onComplete = function():Void 
+			//{ 
 				//hide img 
-				img.alpha = 0.0;
+				//img.alpha = 0.0;
 				
-				changeState(STATE_MENU);
+				//changeState(STATE_MENU);
 					
-			};
+			//};
 
-		Starling.current.juggler.add(tween);
+		//changeState(STATE_MENU);
+
+		//Starling.current.juggler.add(tween);
 
 		//background quad, black
 		backgroundQuad = new Quad(Starling.current.stage.stageWidth, Starling.current.stage.stageHeight, BACKGROUND_COLOR);
 		addChild(backgroundQuad);
 
 		//loading screen image
-        addChild(img);	
+        //addChild(img);	
 
 		contentTF = new TextField(300, 80, "");
 		contentTF.alpha = 0.0;
@@ -229,6 +231,8 @@ class Game extends Sprite {
 			trace("wmctrl maximize failed: " + e);
 		}
 		#end
+
+		changeState(STATE_MENU);
     }
 
 	private function gamepad_onButtonDown(button:GamepadButton):Void

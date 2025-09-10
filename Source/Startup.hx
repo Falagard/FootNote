@@ -29,30 +29,31 @@ class Startup extends Sprite {
 
 		_starling.addEventListener(Event.ROOT_CREATED, function():Void
         {
-            loadAssets(startGame);
+            //loadAssets(startGame);
+            startGame();
         });
 
 		_starling.start ();
 	}
 
-	private function loadAssets(onComplete:Void->Void):Void
-    {
+	// private function loadAssets(onComplete:Void->Void):Void
+    // {
 
-		var rootDirs = File.getRootDirectories();
+	// 	var rootDirs = File.getRootDirectories();
 
-        _assets = new AssetManager();
+    //     _assets = new AssetManager();
 
-        _assets.verbose = true;
+    //     _assets.verbose = true;
         
-		_assets.enqueue([
-            Assets.getPath ("assets/textures/1x/LoadingScreen.png"),
-        ]);
+	// 	_assets.enqueue([
+    //         Assets.getPath ("assets/textures/1x/LoadingScreen.png"),
+    //     ]);
 		
-		_assets.loadQueue(onComplete, function(msg:String):Void
-        {
-            trace("Error "+ msg);
-        });
-    }
+	// 	_assets.loadQueue(onComplete, function(msg:String):Void
+    //     {
+    //         trace("Error "+ msg);
+    //     });
+    // }
 
 	private function startGame():Void
     {
