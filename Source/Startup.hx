@@ -18,10 +18,12 @@ class Startup extends Sprite {
 	
 	
 	public function new () {
+
+        trace("Startup 1");
 		
 		super ();
 
-        trace("Startup 1");
+        
 		
 		_starling = new Starling (Game, stage);
 
