@@ -2,7 +2,7 @@
 <project>
 	
 	<meta title="FootNote" package="com.sample.footnote" version="1.0.0" company="FootNote" />
-	<app main="Startup" path="Export" file="FootNote" />
+	<app main="Game" path="Export" file="FootNote" />
 
 	<window fullscreen="false" width="640" height="480" />
 	

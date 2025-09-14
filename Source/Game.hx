@@ -1,30 +1,17 @@
 package;
 
+import openfl.events.KeyboardEvent;
+import openfl.events.TouchEvent;
 import lime.system.System;
-import starling.events.TouchPhase;
-import starling.text.TextFormat;
 import openfl.geom.Rectangle;
-import starling.events.ResizeEvent;
 import openfl.filesystem.FileMode;
 import openfl.filesystem.FileStream;
 import openfl.events.SampleDataEvent;
-import starling.events.KeyboardEvent;
-import starling.text.TextField;
 import openfl.filesystem.File;
-import starling.display.Image;
-import starling.assets.AssetManager;
-import starling.display.Quad;
-import starling.display.Sprite;
-import starling.utils.Color;
-import starling.animation.Tween;
-import starling.animation.Transitions;
-import starling.animation.Juggler;
-import starling.core.Starling;
-import starling.events.Touch;
-import starling.events.TouchEvent;
 import openfl.ui.Keyboard;
+import openfl.text.TextField;
 import openfl.events.Event;
-
+import openfl.display.Sprite;
 import sys.net.Socket;
 import sys.net.Host;
 import sys.io.File as SysFile;
@@ -56,7 +43,7 @@ class Game extends Sprite {
 
 	public static var MAX_LINES:Int = 6; //max number of pages to show in lyrics
 
-	private static var sAssets:AssetManager;
+	//private static var sAssets:AssetManager;
 	public var selectedDriveIdx:Int = 0;
 	public var selectedDriveFiles:Array<File>;
 	public var selectedFileIdx:Int = 0;
@@ -88,24 +75,26 @@ class Game extends Sprite {
 
 	//var fileServer:FileServer;
 
-	var backgroundQuad:Quad;
+	var backgroundQuad:Sprite;
 
 	private var touchStartX:Float = 0;
     private var touchStartY:Float = 0;
     private var isSwiping:Bool = false;
 	
-	private var alertBackgroundQuad:Quad; // Add this line
+	private var alertBackgroundQuad:Sprite; // Add this line
 
 	public function new () {
 		
 		super ();
+
+		start();
 	
 	}
 
-	public function start(assets:AssetManager):Void
+	public function start():Void
     {
 
-		sAssets = assets;
+		//sAssets = assets;
         //var texture = assets.getTexture("LoadingScreen");
         //var img = new Image(texture);
 		//img.alpha = 0.0;
@@ -113,8 +102,8 @@ class Game extends Sprite {
 		var offset:Int = 10;
 
         // Calculate scaling factor based on stage size (relative to a base width, e.g., 1280)
-        var stageWidth:Float = Starling.current.stage.stageWidth;
-        var stageHeight:Float = Starling.current.stage.stageHeight;
+        var stageWidth:Float = stage.stageWidth;
+        var stageHeight:Float = stage.stageHeight;
         var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
 
         var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
@@ -138,10 +127,14 @@ class Game extends Sprite {
 
 		//changeState(STATE_MENU);
 
-		//Starling.current.juggler.add(tween);
+		//juggler.add(tween);
 
 		//background quad, black
-		backgroundQuad = new Quad(Starling.current.stage.stageWidth, Starling.current.stage.stageHeight, BACKGROUND_COLOR);
+		backgroundQuad = new Sprite();
+        backgroundQuad.graphics.beginFill(BACKGROUND_COLOR); // red
+        backgroundQuad.graphics.drawRect(0, 0, stage.stageWidth, stage.stageHeight); // x, y, width, height
+        backgroundQuad.graphics.endFill();
+		
 		addChild(backgroundQuad);
 
 		//loading screen image
@@ -175,7 +168,9 @@ class Game extends Sprite {
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 		stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
-		stage.addEventListener(TouchEvent.TOUCH, onTouch); // Add this line
+		stage.addEventListener(TouchEvent.TOUCH_BEGIN, onTouchBegin);
+		stage.addEventListener(TouchEvent.TOUCH_MOVE, onTouchMove);
+		stage.addEventListener(TouchEvent.TOUCH_END, onTouchEnd);
 		
 		//fileServer = new FileServer();
 
@@ -192,13 +187,10 @@ class Game extends Sprite {
 		menuTF.width = stageWidth - offset * 2;
 		addChild(menuTF);
 
-		// Add alert background quad (behind alertTF)
-		alertBackgroundQuad = new Quad(
-			stageWidth - offset * 2,
-			stageHeight - offset * 2,
-			0x222222
-		);
-		alertBackgroundQuad.alpha = 0.85;
+		alertBackgroundQuad = new Sprite();
+        alertBackgroundQuad.graphics.beginFill(0x222222, 0.85); 
+        alertBackgroundQuad.graphics.drawRect(0, 0, stageWidth - offset * 2, stageHeight - offset * 2); // x, y, width, height
+        alertBackgroundQuad.graphics.endFill();
 		alertBackgroundQuad.x = offset;
 		alertBackgroundQuad.y = offset;
 		alertBackgroundQuad.visible = false;
@@ -309,26 +301,26 @@ class Game extends Sprite {
 		gamepad.onButtonUp.add(gamepad_onButtonUp);
 	}
 
-	function onResize(e:ResizeEvent):Void 
+	function onResize(event:openfl.events.Event):Void 
 	{
 		// set rectangle dimensions for viewPort:
 		var viewPortRectangle:Rectangle = new Rectangle();
 		viewPortRectangle.width = e.width; viewPortRectangle.height = e.height;
 
 		// resize the viewport:
-		Starling.current.viewPort = viewPortRectangle;
+		viewPort = viewPortRectangle;
 
 		// assign the new stage width and height:
 		stage.stageWidth = e.width;
 		stage.stageHeight = e.height;
 
-		backgroundQuad.width = Starling.current.stage.stageWidth;
-		backgroundQuad.height = Starling.current.stage.stageHeight;
+		backgroundQuad.width = stage.stageWidth;
+		backgroundQuad.height = stage.stageHeight;
 
 		var offset:Int = 10;
         
-        var stageWidth:Float = Starling.current.stage.stageWidth;
-        var stageHeight:Float = Starling.current.stage.stageHeight;
+        var stageWidth:Float = stage.stageWidth;
+        var stageHeight:Float = stage.stageHeight;
         var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
         var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
 
@@ -375,44 +367,45 @@ class Game extends Sprite {
 		refreshCurrentDirectory(directory);
 	}
 
+	
+
 	// Handle swiping right and left to navigate lyrics 
-	private function onTouch(event:TouchEvent):Void
+	private function onTouchBegin(event:TouchEvent):Void
 	{
-		var touchBegan = event.getTouch(this, TouchPhase.BEGAN);
-        var touchMoved = event.getTouch(this, TouchPhase.MOVED);
-        var touchEnded = event.getTouch(this, TouchPhase.ENDED);
+		touchStartX = event.stageX;
+		touchStartY = event.stageY;
+		isSwiping = true;
+	}
 
-        if (touchBegan != null) {
-            var pos = touchBegan.getLocation(this);
-            touchStartX = pos.x;
-            touchStartY = pos.y;
-            isSwiping = true;
-        }
+	private function onTouchMove(event:TouchEvent):Void
+	{
+		// Optionally, you can handle move logic here if needed
+	}
 
-        if (touchEnded != null && isSwiping) {
-            isSwiping = false;
-            var endPos = touchEnded.getLocation(this);
-            var deltaX = endPos.x - touchStartX;
-            var deltaY = endPos.y - touchStartY;
+	private function onTouchEnd(event:TouchEvent):Void
+	{
+		if (!isSwiping) return;
+		isSwiping = false;
 
-            // Set a minimum distance threshold to count as a swipe
-            var swipeThreshold = 50; // pixels
-            var verticalLimit = 100; // prevent diagonal swipes being counted
+		var endX = event.stageX;
+		var endY = event.stageY;
+		var deltaX = endX - touchStartX;
+		var deltaY = endY - touchStartY;
 
-            if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaY) < verticalLimit) {
-                if (deltaX > 0) {
-                    if (currentState == STATE_LYRICS)
-					{
-						navLyricsDown();
-					}
-                } else {
-                    if (currentState == STATE_LYRICS)
-					{
-						navLyricsUp();
-					}
-                }
-            }
-        }
+		var swipeThreshold = 50; // pixels
+		var verticalLimit = 100; // prevent diagonal swipes being counted
+
+		if (Math.abs(deltaX) > swipeThreshold && Math.abs(deltaY) < verticalLimit) {
+			if (deltaX > 0) {
+				if (currentState == STATE_LYRICS) {
+					navLyricsDown();
+				}
+			} else {
+				if (currentState == STATE_LYRICS) {
+					navLyricsUp();
+				}
+			}
+		}
 	}
 
 	private function showAlert(message:String):Void
@@ -754,8 +747,8 @@ class Game extends Sprite {
 		var baseLineHeight = baseFontSize + 10;
 		//var baseWidth:Float = 1280;
 		//var baseHeight:Float = 720;
-		var stageWidth = Starling.current.stage.stageWidth;
-		var stageHeight = Starling.current.stage.stageHeight;
+		var stageWidth = stage.stageWidth;
+		var stageHeight = stage.stageHeight;
 		var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
 		var fontSize = Std.int(baseFontSize * scale);
 		var lineHeight = Std.int(baseLineHeight * scale);
