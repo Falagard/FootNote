@@ -10,6 +10,8 @@ import openfl.events.SampleDataEvent;
 import openfl.filesystem.File;
 import openfl.ui.Keyboard;
 import openfl.text.TextField;
+import openfl.text.TextFormat;
+import openfl.text.TextFieldType;
 import openfl.events.Event;
 import openfl.display.Sprite;
 import sys.net.Socket;
@@ -100,13 +102,25 @@ class Game extends Sprite {
 		//img.alpha = 0.0;
 
 		var offset:Int = 10;
-
-        // Calculate scaling factor based on stage size (relative to a base width, e.g., 1280)
         var stageWidth:Float = stage.stageWidth;
         var stageHeight:Float = stage.stageHeight;
         var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
-
         var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
+
+		// Content TextField
+		contentTF = new TextField();
+		contentTF.x = contentTF.y = offset;
+		contentTF.width = stageWidth - offset * 2;
+		contentTF.height = stageHeight - offset * 2;
+		contentTF.border = true;
+		contentTF.multiline = true;
+		contentTF.wordWrap = true;
+		contentTF.selectable = false;
+		contentTF.type = TextFieldType.DYNAMIC;
+		contentTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
+		contentTF.textColor = 0xFFFFFF;
+		contentTF.visible = true;
+		addChild(contentTF);
 
 		//var imgScale = stageWidth / img.width;
 
@@ -140,15 +154,7 @@ class Game extends Sprite {
 		//loading screen image
         //addChild(img);	
 
-		contentTF = new TextField(300, 80, "");
-		contentTF.alpha = 0.0;
-		contentTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
-        contentTF.x = contentTF.y = offset;
-        contentTF.border = true;
-		contentTF.isHtmlText = true;
-		contentTF.height = stageHeight - offset * 2;
-		contentTF.width = stageWidth - offset * 2;
-		addChild(contentTF);
+		
 
 		lyricsContainer = new Sprite();
 		lyricsContainer.x = 10;
@@ -177,14 +183,18 @@ class Game extends Sprite {
 		stage.addEventListener(Event.RESIZE, onResize);
 
 		// Add menu textfield
-		menuTF = new TextField(400, 120, "");
-		menuTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
+		menuTF = new TextField();
 		menuTF.x = menuTF.y = offset;
-		menuTF.border = true;
-		menuTF.isHtmlText = true;
-		menuTF.visible = false;
-		menuTF.height = stageHeight - offset * 2;
 		menuTF.width = stageWidth - offset * 2;
+		menuTF.height = stageHeight - offset * 2;
+		menuTF.border = true;
+		menuTF.multiline = true;
+		menuTF.wordWrap = true;
+		menuTF.selectable = false;
+		menuTF.type = TextFieldType.DYNAMIC;
+		menuTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
+		menuTF.textColor = 0xFFFFFF;
+		menuTF.visible = false;
 		addChild(menuTF);
 
 		alertBackgroundQuad = new Sprite();
@@ -197,14 +207,18 @@ class Game extends Sprite {
 		addChild(alertBackgroundQuad);
 
 		// Add alert textfield
-		alertTF = new TextField(400, 120, "");
-		alertTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
+		alertTF = new TextField();
 		alertTF.x = alertTF.y = offset;
-		alertTF.border = true;
-		alertTF.isHtmlText = true;
-		alertTF.visible = false;
-		alertTF.height = stageHeight - offset * 2;
 		alertTF.width = stageWidth - offset * 2;
+		alertTF.height = stageHeight - offset * 2;
+		alertTF.border = true;
+		alertTF.multiline = true;
+		alertTF.wordWrap = true;
+		alertTF.selectable = false;
+		alertTF.type = TextFieldType.DYNAMIC;
+		alertTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
+		alertTF.textColor = 0xFFFFFF;
+		alertTF.visible = false;
 		addChild(alertTF);
 
 		Gamepad.onConnect.add(gamepad_onConnect);
@@ -303,52 +317,41 @@ class Game extends Sprite {
 
 	function onResize(event:openfl.events.Event):Void 
 	{
-		// set rectangle dimensions for viewPort:
-		var viewPortRectangle:Rectangle = new Rectangle();
-		viewPortRectangle.width = e.width; viewPortRectangle.height = e.height;
-
-		// resize the viewport:
-		viewPort = viewPortRectangle;
-
-		// assign the new stage width and height:
-		stage.stageWidth = e.width;
-		stage.stageHeight = e.height;
-
 		backgroundQuad.width = stage.stageWidth;
 		backgroundQuad.height = stage.stageHeight;
 
 		var offset:Int = 10;
-        
-        var stageWidth:Float = stage.stageWidth;
-        var stageHeight:Float = stage.stageHeight;
-        var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
-        var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
+    
+    var stageWidth:Float = stage.stageWidth;
+    var stageHeight:Float = stage.stageHeight;
+    var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
+    var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
 
-		contentTF.width = stageWidth - offset * 2;
-		contentTF.height = stageHeight - offset * 2;
-		contentTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
+    contentTF.width = stageWidth - offset * 2;
+    contentTF.height = stageHeight - offset * 2;
+    contentTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
 
-		menuTF.width = stageWidth - offset * 2;
-		menuTF.height = stageHeight - offset * 2;
-		menuTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
+    menuTF.width = stageWidth - offset * 2;
+    menuTF.height = stageHeight - offset * 2;
+    menuTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
 
-		alertBackgroundQuad.width = stageWidth - offset * 2;
-		alertBackgroundQuad.height = stageHeight - offset * 2;
-		alertBackgroundQuad.x = offset;
-		alertBackgroundQuad.y = offset;
+    alertBackgroundQuad.width = stageWidth - offset * 2;
+    alertBackgroundQuad.height = stageHeight - offset * 2;
+    alertBackgroundQuad.x = offset;
+    alertBackgroundQuad.y = offset;
 
-		alertTF.width = stageWidth - offset * 2;
-		alertTF.height = stageHeight - offset * 2;
-		alertTF.format.setTo(FONT_NAME, scaledFontSize, Color.WHITE);
+    alertTF.width = stageWidth - offset * 2;
+    alertTF.height = stageHeight - offset * 2;
+    alertTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
 
-		if(currentState == STATE_LYRICS)
-		{
-			refreshLyrics();
-		}
-		else if(currentState == STATE_FILES)
-		{
-			refreshFiles();
-		}
+    if(currentState == STATE_LYRICS)
+    {
+        refreshLyrics();
+    }
+    else if(currentState == STATE_FILES)
+    {
+        refreshFiles();
+    }
 	}
 
 	function getLyricsDirectory():File
@@ -410,7 +413,7 @@ class Game extends Sprite {
 
 	private function showAlert(message:String):Void
 	{
-		alertTF.text = message;
+		alertTF.htmlText = message;
 		alertTF.visible = true;
 		alertBackgroundQuad.visible = true;
 
@@ -418,6 +421,7 @@ class Game extends Sprite {
 		Timer.delay(() -> {
 			alertTF.visible = false;
 			alertBackgroundQuad.visible = false;
+			alertTF.htmlText = "";
 			alertTF.text = "";
 		}, 3000);
 	}
@@ -496,7 +500,6 @@ class Game extends Sprite {
 		});
 		fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
 			contentTF.text = "Error loading file: " + selectedFile.name;
-			contentTF.isHtmlText = false;
 		});
 
 		fileStream.openAsync(selectedFile, FileMode.READ);
@@ -667,6 +670,7 @@ class Game extends Sprite {
 			refreshFiles();
 		} else if (currentState == STATE_LYRICS) {
 			contentTF.text = "";
+			contentTF.htmlText = "";
 			lyricsContainer.alpha = 1.0;
 
 			//check if there's an audio file with the same name
@@ -711,7 +715,7 @@ class Game extends Sprite {
 			}
 		}
 		html += "<br/><i>Use ←/→ to select, Enter to confirm</i>";
-		menuTF.text = html;
+		menuTF.htmlText = html;
 	}
 
 	function refreshCurrentDirectory(dir:File):Void {
@@ -734,19 +738,16 @@ class Game extends Sprite {
 
 	private function refreshLyrics():Void
 	{
-		// Clear previous line text fields
+		// Remove previous children
 		while (lyricsContainer.numChildren > 0) {
-			lyricsContainer.removeChildAt(0, true); // dispose=true
+			lyricsContainer.removeChildAt(0);
 		}
 
 		var startIdx = currentPageIdx * MAX_LINES;
 		var endIdx = startIdx + MAX_LINES;
 
-		// Scale font size and line height based on resolution
 		var baseFontSize = FONT_SIZE;
 		var baseLineHeight = baseFontSize + 10;
-		//var baseWidth:Float = 1280;
-		//var baseHeight:Float = 720;
 		var stageWidth = stage.stageWidth;
 		var stageHeight = stage.stageHeight;
 		var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
@@ -762,8 +763,6 @@ class Game extends Sprite {
 		}
 
 		var totalHeight = actualLines * lineHeight;
-
-		// Vertically center the container
 		lyricsContainer.y = Math.floor((stageHeight - totalHeight) / 2);
 
 		var yOffset = 0;
@@ -771,40 +770,44 @@ class Game extends Sprite {
 		for (i in startIdx...endIdx) {
 			if (i >= lines.length) break;
 
-			var lineText = StringTools.trim(lines[i]);			
+			var lineText = StringTools.trim(lines[i]);
+			var textColor = 0xFFFFFF;
 
-			// If lineText starts with "chords=", change color and remove "chords="
-			var textColor = Color.WHITE;
 			if (StringTools.startsWith(lineText, "chords=")) {
 				lineText = lineText.substr("chords=".length);
-
-				// Parse chords separated by spaces
 				var chords = lineText.split(" ");
 				var chordCount = chords.length;
 				var spacing = Math.floor((stageWidth - 20) / chordCount);
-
 				var xOffset = 10;
 				for (chord in chords) {
-					var chordTF = new TextField(spacing, lineHeight, chord);
-					chordTF.format.setTo(fontName, fontSize, 0xFFD700); // Gold color for chords
+					var chordTF = new TextField();
 					chordTF.x = xOffset;
 					chordTF.y = yOffset;
+					chordTF.width = spacing;
+					chordTF.height = lineHeight;
+					chordTF.selectable = false;
+					chordTF.type = TextFieldType.DYNAMIC;
+					chordTF.defaultTextFormat = new TextFormat(fontName, fontSize, 0xFFD700, true, false, false, null, null, "center");
+					chordTF.text = chord;
 					chordTF.border = false;
-					chordTF.autoScale = true;
-					chordTF.isHtmlText = false;
-					chordTF.format.horizontalAlign = starling.utils.Align.CENTER;
+					chordTF.multiline = false;
+					chordTF.wordWrap = false;
 					lyricsContainer.addChild(chordTF);
 					xOffset += spacing;
 				}
 			} else {
-				var tf = new TextField(stageWidth - 20, lineHeight, lineText);
-				tf.format.setTo(fontName, fontSize, textColor);
+				var tf = new TextField();
 				tf.x = 10;
 				tf.y = yOffset;
+				tf.width = stageWidth - 20;
+				tf.height = lineHeight;
+				tf.selectable = false;
+				tf.type = TextFieldType.DYNAMIC;
+				tf.defaultTextFormat = new TextFormat(fontName, fontSize, textColor, false, false, false, null, null, "left");
+				tf.text = lineText;
 				tf.border = false;
-				tf.autoScale = true;
-				tf.isHtmlText = true;
-				tf.format.horizontalAlign = starling.utils.Align.LEFT;
+				tf.multiline = false;
+				tf.wordWrap = false;
 				lyricsContainer.addChild(tf);
 			}
 			yOffset += lineHeight;
@@ -840,7 +843,7 @@ class Game extends Sprite {
 			htmlText += "<br/>";
 		}
 
-		contentTF.text = htmlText;
+		contentTF.htmlText = htmlText;
 	}
 
     private function detectUSBAndCopyDirectory():Void 
