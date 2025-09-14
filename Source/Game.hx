@@ -174,9 +174,9 @@ class Game extends Sprite {
         
 		stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
 		stage.addEventListener(KeyboardEvent.KEY_UP, onKeyUp);
-		stage.addEventListener(TouchEvent.TOUCH_BEGIN, onTouchBegin);
-		stage.addEventListener(TouchEvent.TOUCH_MOVE, onTouchMove);
-		stage.addEventListener(TouchEvent.TOUCH_END, onTouchEnd);
+		//stage.addEventListener(TouchEvent.TOUCH_BEGIN, onTouchBegin);
+		//stage.addEventListener(TouchEvent.TOUCH_MOVE, onTouchMove);
+		//stage.addEventListener(TouchEvent.TOUCH_END, onTouchEnd);
 		
 		//fileServer = new FileServer();
 
@@ -221,22 +221,12 @@ class Game extends Sprite {
 		alertTF.visible = false;
 		addChild(alertTF);
 
-		Gamepad.onConnect.add(gamepad_onConnect);
+		//Gamepad.onConnect.add(gamepad_onConnect);
 
-		for (gamepad in Gamepad.devices)
-		{
-			gamepad_onConnect(gamepad);
-		}
-
-		#if linux
-		try {
-			// Maximize the window using wmctrl
-			var proc = new sys.io.Process("wmctrl", ["-r", ":ACTIVE:", "-b", "add,maximized_vert,maximized_horz"]);
-			proc.close();
-		} catch (e:Dynamic) {
-			trace("wmctrl maximize failed: " + e);
-		}
-		#end
+		//for (gamepad in Gamepad.devices)
+		//{
+		//	gamepad_onConnect(gamepad);
+		//}
 
 		changeState(STATE_MENU);
     }
