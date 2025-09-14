@@ -149,7 +149,7 @@ class Game extends Sprite {
         backgroundQuad.graphics.drawRect(0, 0, stage.stageWidth, stage.stageHeight); // x, y, width, height
         backgroundQuad.graphics.endFill();
 		
-		addChild(backgroundQuad);
+		//addChild(backgroundQuad);
 
 		//loading screen image
         //addChild(img);	
