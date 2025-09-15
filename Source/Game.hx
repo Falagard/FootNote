@@ -222,16 +222,6 @@ class Game extends Sprite {
 			gamepad_onConnect(gamepad);
 		}
 
-		#if linux
-		try {
-			// Maximize the window using wmctrl
-			var proc = new sys.io.Process("wmctrl", ["-r", ":ACTIVE:", "-b", "add,maximized_vert,maximized_horz"]);
-			proc.close();
-		} catch (e:Dynamic) {
-			trace("wmctrl maximize failed: " + e);
-		}
-		#end
-
 		changeState(STATE_MENU);
     }
 
