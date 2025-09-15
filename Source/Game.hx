@@ -118,8 +118,10 @@ class Game extends Sprite {
 		contentTF.selectable = false;
 		contentTF.type = TextFieldType.DYNAMIC;
 		contentTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
-		contentTF.textColor = 0xFFFFFF;
+		contentTF.textColor = 0x282757;
 		contentTF.visible = true;
+		contentTF.htmlText = "Yo yo";
+
 		addChild(contentTF);
 
 		//var imgScale = stageWidth / img.width;
@@ -193,7 +195,7 @@ class Game extends Sprite {
 		menuTF.selectable = false;
 		menuTF.type = TextFieldType.DYNAMIC;
 		menuTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
-		menuTF.textColor = 0xFFFFFF;
+		menuTF.textColor = 0x282757;
 		menuTF.visible = false;
 		addChild(menuTF);
 
@@ -312,36 +314,36 @@ class Game extends Sprite {
 
 		var offset:Int = 10;
     
-    var stageWidth:Float = stage.stageWidth;
-    var stageHeight:Float = stage.stageHeight;
-    var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
-    var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
+		var stageWidth:Float = stage.stageWidth;
+		var stageHeight:Float = stage.stageHeight;
+		var scale:Float = Math.min(stageWidth / baseWidth, stageHeight / baseHeight);
+		var scaledFontSize:Int = Std.int(FONT_SIZE * scale);
 
-    contentTF.width = stageWidth - offset * 2;
-    contentTF.height = stageHeight - offset * 2;
-    contentTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
+		contentTF.width = stageWidth - offset * 2;
+		contentTF.height = stageHeight - offset * 2;
+		contentTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
 
-    menuTF.width = stageWidth - offset * 2;
-    menuTF.height = stageHeight - offset * 2;
-    menuTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
+		menuTF.width = stageWidth - offset * 2;
+		menuTF.height = stageHeight - offset * 2;
+		menuTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
 
-    alertBackgroundQuad.width = stageWidth - offset * 2;
-    alertBackgroundQuad.height = stageHeight - offset * 2;
-    alertBackgroundQuad.x = offset;
-    alertBackgroundQuad.y = offset;
+		alertBackgroundQuad.width = stageWidth - offset * 2;
+		alertBackgroundQuad.height = stageHeight - offset * 2;
+		alertBackgroundQuad.x = offset;
+		alertBackgroundQuad.y = offset;
 
-    alertTF.width = stageWidth - offset * 2;
-    alertTF.height = stageHeight - offset * 2;
-    alertTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
+		alertTF.width = stageWidth - offset * 2;
+		alertTF.height = stageHeight - offset * 2;
+		alertTF.defaultTextFormat = new TextFormat(FONT_NAME, scaledFontSize, 0xFFFFFF);
 
-    if(currentState == STATE_LYRICS)
-    {
-        refreshLyrics();
-    }
-    else if(currentState == STATE_FILES)
-    {
-        refreshFiles();
-    }
+		if(currentState == STATE_LYRICS)
+		{
+			refreshLyrics();
+		}
+		else if(currentState == STATE_FILES)
+		{
+			refreshFiles();
+		}
 	}
 
 	function getLyricsDirectory():File
@@ -420,14 +422,14 @@ class Game extends Sprite {
 	{
 		selectedMenuIdx++;
 		if (selectedMenuIdx > 1) selectedMenuIdx = 0;
-		updateMenuText();
+		refreshMenu();
 	}
 
 	private function menuNavUp():Void
 	{
 		selectedMenuIdx--;
 		if (selectedMenuIdx < 0) selectedMenuIdx = 1;
-		updateMenuText();
+		refreshMenu();
 	}
 
 	private function menuNavSelect():Void
@@ -489,7 +491,7 @@ class Game extends Sprite {
 			changeState(STATE_LYRICS);
 		});
 		fileStream.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent):Void {
-			contentTF.text = "Error loading file: " + selectedFile.name;
+			contentTF.htmlText = "Error loading file: " + selectedFile.name;
 		});
 
 		fileStream.openAsync(selectedFile, FileMode.READ);
@@ -639,28 +641,22 @@ class Game extends Sprite {
 
 		selectKeyDownTime = -1; // Reset select key timer
 
+		lyricsContainer.visible = false;
+		contentTF.visible = false;
+		menuTF.visible = false;
+
     	if (currentState == STATE_MENU) 
 		{
 			selectedMenuIdx = 0; // Reset menu selection
 			menuTF.visible = true;
-			contentTF.visible = false;
-			lyricsContainer.visible = false;
-			updateMenuText();
-    	} 	
-		else 
-		{
-			menuTF.visible = false;
-			contentTF.visible = true;
-			lyricsContainer.visible = true;
-		}
+			refreshMenu();
+    	}
 
     	if (currentState == STATE_FILES) {
-			contentTF.alpha = 1.0;
-			lyricsContainer.alpha = 0.0;
+			contentTF.visible = true;
 			refreshFiles();
 		} else if (currentState == STATE_LYRICS) {
-			contentTF.text = "";
-			contentTF.htmlText = "";
+			lyricsContainer.visible = true;
 			lyricsContainer.alpha = 1.0;
 
 			//check if there's an audio file with the same name
@@ -690,21 +686,20 @@ class Game extends Sprite {
 	}
 
 	// Add this helper to update menu text with selection highlight
-	private function updateMenuText():Void 
+	private function refreshMenu():Void 
 	{
 		var menuOptions = [
-			"1. View Lyric Files",
-			"2. Copy Files From USB"
+			"<font color='#222222'>View Lyric Files</font>",
+			"<font color='#222222'>Copy Files From USB</font>"
 		];
-		var html = "<b>Menu</b><br/><br/>";
+		var html = "<font color='#222222'><b>Menu</b></font><br/><br/>";
 		for (i in 0...menuOptions.length) {
 			if (i == selectedMenuIdx) {
 				html += "<font color='#7FB8FF'><b>" + menuOptions[i] + "</b></font><br/>";
 			} else {
-				html += menuOptions[i] + "<br/>";
+				html += "<font color='#222222'>" + menuOptions[i] + "</font><br/>";
 			}
 		}
-		html += "<br/><i>Use ←/→ to select, Enter to confirm</i>";
 		menuTF.htmlText = html;
 	}
 
@@ -810,7 +805,7 @@ class Game extends Sprite {
 		if (filePage >= totalPages) filePage = totalPages - 1;
 		if (filePage < 0) filePage = 0;
 
-		var htmlText:String = "<i>Choose a file or folder: </i><br/>";
+		var htmlText:String = "<font color='#222222'><b>Choose a file or folder: </b></font><br/>";
 		var startIdx = filePage * FILES_PER_PAGE;
 		var endIdx = startIdx + FILES_PER_PAGE;
 
@@ -821,13 +816,15 @@ class Game extends Sprite {
 
 			if (i == selectedFileIdx) {
 				htmlText += "<b><font color='" + SELECTED_FILE_COLOR + "'>";
-			}
-
-			htmlText += currentFile.isDirectory ? "[DIR] " : "";
-			htmlText += currentFile.name;
-
-			if (i == selectedFileIdx) {
+				htmlText += currentFile.isDirectory ? "[DIR] " : "";
+				htmlText += currentFile.name;
 				htmlText += "</font></b>";
+			}
+			else {
+				htmlText += "<font color='#222222'>";
+				htmlText += currentFile.isDirectory ? "[DIR] " : "";
+				htmlText += currentFile.name;
+				htmlText += "</font>";
 			}
 
 			htmlText += "<br/>";
