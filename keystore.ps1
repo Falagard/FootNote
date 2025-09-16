@@ -2,10 +2,10 @@
 # PowerShell Keystore Generator
 # ===============================
 
-$KEYSTORE  = "my-release-key.jks"
-$ALIAS     = "my-key-alias"
-$STOREPASS = "S3cretStorePass"
-$KEYPASS   = "S3cretKeyPass"
+$KEYSTORE  = "foonote-release-key.jks"
+$ALIAS     = "foonote-release-key"
+$STOREPASS = "FootNotePass123"
+$KEYPASS   = "FootNotePass123"
 
 if (-not (Test-Path $KEYSTORE)) {
     & keytool -genkeypair `
@@ -17,7 +17,7 @@ if (-not (Test-Path $KEYSTORE)) {
         -validity 10000 `
         -storepass $STOREPASS `
         -keypass $KEYPASS `
-        -dname "CN=Your Name, OU=Dev, O=YourOrg, L=City, ST=State, C=US"
+        -dname "CN=FootNote, OU=Dev, O=FootNote, L=Sturgeon Falls, ST=ON, C=Canada"
 
     Write-Host "✅ Keystore created: $KEYSTORE"
 } else {

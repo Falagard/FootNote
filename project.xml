@@ -21,6 +21,6 @@
 		<config:android permission="android.permission.BLUETOOTH_SCAN" />
 	</config:android> -->
 
-	<!-- <certificate path="my-release-key.jks" alias="1" if="android"/> -->
+	<certificate path="foonote-release-key.jks" alias="foonote-release-key" password="FootNotePass123" if="android"/>
 	
 </project>
