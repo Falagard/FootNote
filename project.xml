@@ -16,10 +16,10 @@
 	<architecture name="armv64" exclude="armv7" if="android" />
 	<config:android target-sdk-version="33"/>
 
-	<config:android>
+	<!-- <config:android>
 		<config:android permission="android.permission.INTERNET" />
 		<config:android permission="android.permission.BLUETOOTH_SCAN" />
-	</config:android>
+	</config:android> -->
 
 	<certificate path="my-release-key.jks" alias="1" if="android"/>
 	
