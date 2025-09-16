@@ -29,8 +29,8 @@ jobs:
       run: |
         haxelib install lime --quiet
         haxelib install openfl --quiet
-        curl --output ../hxcpp-4.3.45.zip --location https://github.com/HaxeFoundation/hxcpp/releases/download/v4.3.98/hxcpp-4.3.98.zip
-        haxelib install ../hxcpp-4.3.98.zip --quiet
+        curl -L --output hxcpp-4.3.98.zip --location https://github.com/HaxeFoundation/hxcpp/releases/download/v4.3.98/hxcpp-4.3.98.zip
+        haxelib install hxcpp-4.3.98.zip --quiet
         haxelib install starling --quiet
 
     - name: Setup Java 21
