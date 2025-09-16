@@ -21,6 +21,7 @@ jobs:
         haxelib install lime --quiet
         haxelib install openfl --quiet
         haxelib install hxcpp 4.2.1 --quiet
+        haxelib install starling --quiet
     - uses: actions/setup-java@v4
       with:
         java-version: "11"
