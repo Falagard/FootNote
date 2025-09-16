@@ -12,5 +12,7 @@
 	<haxelib name="starling" />
 	
 	<assets path="Assets" rename="assets" />
+
+	<architecture name="armv64" exclude="armv7" if="android" />
 	
 </project>
