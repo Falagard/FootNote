@@ -36,5 +36,10 @@ jobs:
     - name: Build project
       run: |
         haxelib run openfl build android
-    - name: List Export folder
-      run: ls -R Export || true
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: FootNote-android-apk
+        path: |
+          Export/android/bin/app/build/outputs/apk/debug/*.apk
+          Export/android/bin/app/build/outputs/apk/release/*.apk
