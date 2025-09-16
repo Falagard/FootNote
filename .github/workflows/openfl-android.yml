@@ -36,3 +36,5 @@ jobs:
     - name: Build project
       run: |
         haxelib run openfl build android
+    - name: List Export folder
+      run: ls -R Export || true
