@@ -14,5 +14,6 @@
 	<assets path="Assets" rename="assets" />
 
 	<architecture name="armv64" exclude="armv7" if="android" />
+	<config:android target-sdk-version="33"/>
 	
 </project>
