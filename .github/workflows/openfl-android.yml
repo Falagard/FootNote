@@ -33,10 +33,10 @@ jobs:
         haxelib install hxcpp-4.3.98.zip --quiet
         haxelib install starling --quiet
 
-    - name: Setup Java 11
+    - name: Setup Java 17
       uses: actions/setup-java@v4
       with:
-        java-version: "11"
+        java-version: "17"
         distribution: "temurin"
 
     - name: Lime Android setup
